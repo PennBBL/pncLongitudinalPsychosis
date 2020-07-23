@@ -22,6 +22,8 @@ proto_df$first_diagnosis <- ordered(proto_df$first_diagnosis,
 proto_df$last_diagnosis <- ordered(proto_df$last_diagnosis,
   c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
+write.csv(proto_df, '~/Documents/pncLongitudinalPsychosis/scripts/ideas/protodata.csv', row.names=FALSE)
+
 ############ Plot trajectories ############
 
 sips_plot <- ggplot(proto_df, aes(x=age, y=SIPS, color=last_diagnosis)) +

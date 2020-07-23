@@ -1,0 +1,11 @@
+"bblid","age","sex","diagnosis","first_diagnosis","last_diagnosis","SIPS","PMAT"
+82071,12.5,"F","PS","PS - First Diagnosis","PS - Last Diagnosis",3,-0.5
+82071,13,"F","OP","PS - First Diagnosis","PS - Last Diagnosis",2,-0.2
+82071,14,"F","PS","PS - First Diagnosis","PS - Last Diagnosis",3,-0.1
+82071,18,"F","PS","PS - First Diagnosis","PS - Last Diagnosis",4,-0.12
+87773,16,"M","TD","TD - First Diagnosis","OP - Last Diagnosis",1,0.1
+87773,16.5,"M","OP","TD - First Diagnosis","OP - Last Diagnosis",2,0.67
+87773,17.2,"M","OP","TD - First Diagnosis","OP - Last Diagnosis",2,1.2
+81277,15,"F","OP","OP - First Diagnosis","TD - Last Diagnosis",2,0.5
+81277,17.2,"F","OP","OP - First Diagnosis","TD - Last Diagnosis",2,0.6
+81277,20,"F","TD","OP - First Diagnosis","TD - Last Diagnosis",1,0.72
