@@ -94,12 +94,12 @@ dev.off()
 
 final_df$NumTypesTraumas <- rowSums(final_df[, ptdvars])
 final_df$NumTypesTraumas <- recode(final_df$NumTypesTraumas, `0`=0, `1`=1, `2`=2,
-  `3`=3, `4`=3, `5`=3, `6`=3, `7`=3)
+  `3`=2, `4`=2, `5`=2, `6`=2, `7`=2)
 final_df$NumTypesTraumas <- factor(final_df$NumTypesTraumas)
 final_df <- fastDummies::dummy_cols(final_df, select_columns = 'NumTypesTraumas')
 
 final_sum_df <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
-  c('Female', 'White', paste0('NumTypesTraumas_', 0:3)))
+  c(paste0('NumTypesTraumas_', 0:2)))
 names(final_sum_df) <- c('first_diagnosis', 'last_diagnosis', 'Feature')
 
 final_sum_df$Percent <- sapply(1:nrow(final_sum_df), getPercent, dataf=final_sum_df)
@@ -113,19 +113,29 @@ final_sum_df$last_diagnosis <- recode(final_sum_df$last_diagnosis,
 final_sum_df$last_diagnosis <- ordered(final_sum_df$last_diagnosis,
   c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
-final_sum_df$type <- recode(final_sum_df$Feature, 'White'='demo', 'Female'='demo',
-    'NumTypesTraumas_0'='ptd', 'NumTypesTraumas_1'='ptd', 'NumTypesTraumas_2'='ptd',
-    'NumTypesTraumas_3'='ptd')
+final_sum_df$type <- recode(final_sum_df$Feature, 'NumTypesTraumas_0'='fine',
+  'NumTypesTraumas_1'='bad', 'NumTypesTraumas_2'='bad')
+
+subtit <- paste0('Ns: TD-TD=', nrow(final_df[final_df$t1_tfinal == 'TD_TD',]),
+    ', TD-OP=', nrow(final_df[final_df$t1_tfinal == 'TD_other',]),
+    ', TD-PS=', nrow(final_df[final_df$t1_tfinal == 'TD_PS',]),
+    ',\nOP-TD=', nrow(final_df[final_df$t1_tfinal == 'other_TD',]),
+    ', OP-OP=', nrow(final_df[final_df$t1_tfinal == 'other_other',]),
+    ', OP-PS=', nrow(final_df[final_df$t1_tfinal == 'other_PS',]),
+    ',\nPS-TD=', nrow(final_df[final_df$t1_tfinal == 'PS_TD',]),
+    ', PS-OP=', nrow(final_df[final_df$t1_tfinal == 'PS_other',]),
+    ', PS-PS=', nrow(final_df[final_df$t1_tfinal == 'PS_PS',]))
 
 sum_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=type)) +
   theme_linedraw() + geom_bar(stat = 'identity') +
   facet_grid(first_diagnosis ~ last_diagnosis) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position='none') +
-  coord_cartesian(ylim=c(0, 100)) +
-  labs(title='Demographic and Traumatic Features by Diagnostic Bin', subtitle=subtit)
+  theme(legend.position='none') + coord_cartesian(ylim=c(0, 100)) +
+  scale_x_discrete(breaks=c('NumTypesTraumas_0', 'NumTypesTraumas_1',
+    'NumTypesTraumas_2'), labels=c('0', '1', '2+')) +
+  labs(title='Number of Types of Traumas', subtitle=subtit)
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/demoTraumaSum3x3.pdf', width=9, height=7)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/traumaSum3x3.pdf', width=5, height=5.5)
 sum_plot
 dev.off()
 

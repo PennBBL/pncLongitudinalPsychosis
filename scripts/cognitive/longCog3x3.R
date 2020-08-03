@@ -2,13 +2,18 @@
 ### diagnosis
 ###
 ### Ellyn Butler
-### July 27, 2020
+### July 27, 2020 - July 30, 2020
 
 
 library('dplyr')
 library('reshape2')
 library('ggplot2')
 library('ggpubr')
+library('lme4')
+library('gamm4')
+library('stringr')
+library('broom')
+library('tidyr')
 
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 names(clin_df)[names(clin_df) == 't1'] <- 'first_diagnosis'
@@ -17,6 +22,9 @@ clin_df$first_diagnosis <- as.character(clin_df$first_diagnosis)
 clin_df$last_diagnosis <- as.character(clin_df$last_diagnosis)
 clin_df$first_diagnosis <- recode(clin_df$first_diagnosis, 'TD'='TD', 'other'='OP', 'PS'='PS')
 clin_df$last_diagnosis <- recode(clin_df$last_diagnosis, 'TD'='TD', 'other'='OP', 'PS'='PS')
+clin_df$t1_tfinal <- recode(clin_df$t1_tfinal, 'TD_TD'='TD_TD', 'TD_other'='TD_OP',
+  'TD_PS'='TD_PS', 'other_TD'='OP_TD', 'other_other'='OP_OP', 'other_PS'='OP_PS',
+  'PS_TD'='PS_TD', 'PS_other'='PS_OP', 'PS_PS'='PS_PS')
 
 cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/CNB_Longitudinal_Core_11February2020.csv')
 cnb_df <- cnb_df[, c('bblid', 'Age', 'timepoint', 'Test', 'ACC_raw')]
@@ -25,44 +33,72 @@ cnb_df <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='ACC_raw')
 
 getDiagnoses <- function(i) {
   bblid <- cnb_df[i, 'bblid']
-  c(clin_df[clin_df$bblid == bblid, 'first_diagnosis'], clin_df[clin_df$bblid == bblid, 'last_diagnosis'])
+  c(clin_df[clin_df$bblid == bblid, 'first_diagnosis'], clin_df[clin_df$bblid == bblid, 'last_diagnosis'], as.character(clin_df[clin_df$bblid == bblid, 't1_tfinal']))
 }
 
-cnb_df[,c('first_diagnosis', 'last_diagnosis')] <- t(sapply(1:nrow(cnb_df), getDiagnoses))
+cnb_df[,c('first_diagnosis', 'last_diagnosis', 't1_tfinal')] <- t(sapply(1:nrow(cnb_df), getDiagnoses))
 
-cnb_df$first_diagnosis <- recode(cnb_df$first_diagnosis,
-  'PS'='PS - First Diagnosis', 'OP'='OP - First Diagnosis', 'TD'='TD - First Diagnosis')
-cnb_df$first_diagnosis <- ordered(cnb_df$first_diagnosis,
-  c('PS - First Diagnosis', 'OP - First Diagnosis', 'TD - First Diagnosis'))
-cnb_df$last_diagnosis <- recode(cnb_df$last_diagnosis,
-  'TD'='TD - Last Diagnosis', 'OP'='OP - Last Diagnosis', 'PS'='PS - Last Diagnosis')
-cnb_df$last_diagnosis <- ordered(cnb_df$last_diagnosis,
-  c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
+cnb_df$first_diagnosis <- ordered(cnb_df$first_diagnosis, c('TD', 'OP', 'PS'))
+cnb_df$last_diagnosis <- ordered(cnb_df$last_diagnosis, c('TD', 'OP', 'PS'))
+cnb_df$t1_tfinal <- ordered(cnb_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
+  'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
 
-
-for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'MPRAXIS', 'NBACK', 'PCET',
+for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
   'PLOT', 'PMAT', 'PVRT', 'TAP', 'VOLT')) {
-  cnb_plot <- ggplot(cnb_df, aes_string(x='Age', y=test, color='last_diagnosis')) +
-    theme_linedraw() + geom_line(alpha=.5) +
+  cnb_test_df <- cnb_df[!is.na(cnb_df[,test]),]
+  row.names(cnb_test_df) <- 1:nrow(cnb_test_df)
+  names(cnb_test_df)[names(cnb_test_df) == test] <- 'test'
+
+  cnb_test_df$t1_tfinal_factor <- factor(cnb_test_df$t1_tfinal)
+
+  # 9 groups - not working as of August 3, 2020
+  model <- gamm4(test ~ s(Age, k=20, bs="cr") + s(Age, by=t1_tfinal_factor, k=10, bs="cr"),
+    data=cnb_test_df, random=~(1|bblid))
+  tidy(model$gam) %>%
+    filter(str_detect(term, "t1_tfinal_factor"))
+
+  cnb_test_df$predgamm <- predict(model$gam)
+
+  subtit <- paste0('Sessions: TD-TD=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',]),
+    ', TD-OP=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'TD_OP',]),
+    ', TD-PS=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'TD_PS',]),
+    ', OP-TD=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'OP_TD',]),
+    ', OP-OP=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'OP_OP',]),
+    ', OP-PS=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'OP_PS',]),
+    ', PS-TD=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'PS_TD',]),
+    ', PS-OP=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'PS_OP',]),
+    ', PS-PS=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'PS_PS',]))
+
+  cnb_test_df$first_diagnosis <- recode(cnb_test_df$first_diagnosis,
+    'PS'='PS - First Diagnosis', 'OP'='OP - First Diagnosis', 'TD'='TD - First Diagnosis')
+  cnb_test_df$first_diagnosis <- ordered(cnb_test_df$first_diagnosis,
+    c('PS - First Diagnosis', 'OP - First Diagnosis', 'TD - First Diagnosis'))
+  cnb_test_df$last_diagnosis <- recode(cnb_test_df$last_diagnosis,
+    'TD'='TD - Last Diagnosis', 'OP'='OP - Last Diagnosis', 'PS'='PS - Last Diagnosis')
+  cnb_test_df$last_diagnosis <- ordered(cnb_test_df$last_diagnosis,
+    c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
+
+  cnb_plot <- ggplot(cnb_test_df, aes(x=Age, y=test, color=last_diagnosis)) +
+    theme_linedraw() + geom_line(aes(group=bblid), alpha=.2) +
     facet_grid(first_diagnosis ~ last_diagnosis) +
-    scale_color_manual(values=c('deepskyblue2', 'darkorchid1', 'firebrick4')) +
-    theme(legend.position = 'none') + labs(title=test)
+    scale_color_manual(values=c('#009E73', '#CC79A7', '#0072B2')) +
+    theme(legend.position = 'none') + labs(title=test, subtitle=subtit) +
+    geom_line(aes(y=predgamm), size=1)
   assign(paste0(test, '_plot'), cnb_plot)
 }
 
 # TO DO:
 # https://stackoverflow.com/questions/31075407/plot-mixed-effects-model-in-ggplot
-# Subtitle with Ns specific to the test
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longCog3x3.pdf', width=9, height=7)
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longCog3x3.pdf', width=10, height=6)
 ADT_plot
 CPF_plot
 CPT_plot
 CPW_plot
 ER40_plot
 MEDF_plot
-MPRAXIS_plot
 NBACK_plot
 PCET_plot
 PLOT_plot
@@ -71,3 +107,24 @@ PVRT_plot
 TAP_plot
 VOLT_plot
 dev.off()
+
+
+
+
+
+
+
+
+
+
+# Baseline groups
+#model_first <- gamm4(test ~ s(Age, k=20, bs="cr") + s(Age, by=first_diagnosis, k=10, bs="cr"),
+#  data=cnb_test_df, random=~(1|bblid))
+#tidy(model_first$gam) %>%
+#  filter(str_detect(term, "first_diagnosis"))
+
+# Baseline groups
+#model_last <- gamm4(test ~ s(Age, k=20, bs="cr") + s(Age, by=last_diagnosis, k=10, bs="cr"),
+#  data=cnb_test_df, random=~(1|bblid))
+#tidy(model_last$gam) %>%
+#  filter(str_detect(term, "last_diagnosis"))
