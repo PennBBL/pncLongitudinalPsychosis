@@ -2,7 +2,7 @@
 ### diagnosis
 ###
 ### Ellyn Butler
-### July 27, 2020 - July 30, 2020
+### July 27, 2020 - August 3, 2020
 
 set.seed(20)
 
@@ -52,10 +52,19 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
 
   cnb_test_df$t1_tfinal_factor <- factor(cnb_test_df$t1_tfinal)
 
-  # 9 groups - not working as of August 3, 2020
-  model <- gamm4(test ~ s(Age, k=20, bs="cr") + s(Age, by=t1_tfinal_factor, k=10, bs="cr"),
-    data=cnb_test_df, random=~(1|bblid))
-  model_info <- tidy(model$gam) %>%
+  #model_orig <- gamm4(test ~ s(Age, k=20, bs="cr") + s(Age, by=t1_tfinal_factor,
+  #  k=10, bs="cr"), data=cnb_test_df, random=~(1|bblid))
+  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=30, bs="cr"),
+      data=cnb_test_df, random=~(1|bblid))
+  #mod2b <- gamm4(test ~ t2(Age_bl, Time, k=c(20, 5), bs='cr'), data=cnb_test_df,
+  #  random=~(1|bblid)) # Need to calculate Age_bl and Time, and then figure out the fits
+  capture.output(gam.check(mod1b$gam),
+    file=paste0('~/Documents/pncLongitudinalPsychosis/results/', test, '_gamm_mod1b.txt'))
+  # ^ Can't get k-index above 1 (up to k=50), but k' is very far away from edf
+
+
+
+  model_info <- tidy(mod1b$gam) %>%
     filter(str_detect(term, "t1_tfinal_factor"))
   assign(paste0(test, '_model'), model_info)
   model_info <- model_info[model_info$p.value < .05,]
