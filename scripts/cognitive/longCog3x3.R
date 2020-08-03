@@ -4,6 +4,7 @@
 ### Ellyn Butler
 ### July 27, 2020 - July 30, 2020
 
+set.seed(20)
 
 library('dplyr')
 library('reshape2')
@@ -54,8 +55,10 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
   # 9 groups - not working as of August 3, 2020
   model <- gamm4(test ~ s(Age, k=20, bs="cr") + s(Age, by=t1_tfinal_factor, k=10, bs="cr"),
     data=cnb_test_df, random=~(1|bblid))
-  tidy(model$gam) %>%
+  model_info <- tidy(model$gam) %>%
     filter(str_detect(term, "t1_tfinal_factor"))
+  assign(paste0(test, '_model'), model_info)
+  model_info <- model_info[model_info$p.value < .05,]
 
   cnb_test_df$predgamm <- predict(model$gam)
 
@@ -82,8 +85,30 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
     theme_linedraw() + geom_line(aes(group=bblid), alpha=.2) +
     facet_grid(first_diagnosis ~ last_diagnosis) +
     scale_color_manual(values=c('#009E73', '#CC79A7', '#0072B2')) +
-    theme(legend.position = 'none') + labs(title=test, subtitle=subtit) +
-    geom_line(aes(y=predgamm), size=1)
+    theme(legend.position = 'none', plot.title=element_text(size=14, face="bold"),
+      plot.subtitle=element_text(size=8)) +
+    labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1)
+
+  if (nrow(model_info) > 0) {
+    # List the first-last pairs whose age trajectories significantly differ from TD-TD
+    diagcats <- gsub('factor', '', model_info$term)
+    diagcats <- gsub('s\\(Age\\):t1_tfinal_', '', diagcats)
+    ann_text <- data.frame(t1_tfinal=diagcats, lab = "*", Age=28)
+    int <- strsplit(as.character(ann_text$t1_tfinal), '_')
+    ann_text$first_diagnosis <- sapply(int, `[[`, 1)
+    ann_text$first_diagnosis <- paste(ann_text$first_diagnosis, '- First Diagnosis')
+    ann_text$last_diagnosis <- sapply(int, `[[`, 2)
+    ann_text$last_diagnosis <- paste(ann_text$last_diagnosis, '- Last Diagnosis')
+
+    ann_text$first_diagnosis <- ordered(ann_text$first_diagnosis,
+      c('PS - First Diagnosis', 'OP - First Diagnosis', 'TD - First Diagnosis'))
+    ann_text$last_diagnosis <- recode(ann_text$last_diagnosis,
+      'TD'='TD - Last Diagnosis', 'OP'='OP - Last Diagnosis', 'PS'='PS - Last Diagnosis')
+    ann_text$last_diagnosis <- ordered(ann_text$last_diagnosis,
+      c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
+
+    cnb_plot <- cnb_plot + geom_text(data=ann_text, y=-1, label="*", size=15)
+  }
   assign(paste0(test, '_plot'), cnb_plot)
 }
 
@@ -92,7 +117,7 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
 
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longCog3x3.pdf', width=10, height=6)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longCog3x3.pdf', width=8, height=6)
 ADT_plot
 CPF_plot
 CPT_plot
