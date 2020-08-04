@@ -2,7 +2,7 @@
 ### diagnosis
 ###
 ### Ellyn Butler
-### July 27, 2020 - August 3, 2020
+### July 27, 2020 - August 4, 2020
 
 set.seed(20)
 
@@ -52,24 +52,23 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
 
   cnb_test_df$t1_tfinal_factor <- factor(cnb_test_df$t1_tfinal)
 
-  #model_orig <- gamm4(test ~ s(Age, k=20, bs="cr") + s(Age, by=t1_tfinal_factor,
-  #  k=10, bs="cr"), data=cnb_test_df, random=~(1|bblid))
-  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=30, bs="cr"),
-      data=cnb_test_df, random=~(1|bblid))
+  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=60, bs="cr") +
+    s(Age, k=40, bs="cr"), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+    # August 4: Without the second term, just fitting an intercept for TD-TD
+  capture.output(gam.check(mod1b$gam),
+    file=paste0('~/Documents/pncLongitudinalPsychosis/results/', test, '_check_gamm_mod1b.txt'))
+  # ^ Can't get k-index above 1 (up to k=50), but k' is very far away from edf
+  #TO DO: Save check plots
+
   #mod2b <- gamm4(test ~ t2(Age_bl, Time, k=c(20, 5), bs='cr'), data=cnb_test_df,
   #  random=~(1|bblid)) # Need to calculate Age_bl and Time, and then figure out the fits
-  capture.output(gam.check(mod1b$gam),
-    file=paste0('~/Documents/pncLongitudinalPsychosis/results/', test, '_gamm_mod1b.txt'))
-  # ^ Can't get k-index above 1 (up to k=50), but k' is very far away from edf
-
-
 
   model_info <- tidy(mod1b$gam) %>%
     filter(str_detect(term, "t1_tfinal_factor"))
   assign(paste0(test, '_model'), model_info)
   model_info <- model_info[model_info$p.value < .05,]
 
-  cnb_test_df$predgamm <- predict(model$gam)
+  cnb_test_df$predgamm <- predict(mod1b$gam)
 
   subtit <- paste0('Sessions: TD-TD=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',]),
     ', TD-OP=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'TD_OP',]),
@@ -116,7 +115,8 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
     ann_text$last_diagnosis <- ordered(ann_text$last_diagnosis,
       c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
-    cnb_plot <- cnb_plot + geom_text(data=ann_text, y=-1, label="*", size=15)
+    num <- min(cnb_test_df$test) + (max(cnb_test_df$test) - min(cnb_test_df$test))*.33
+    cnb_plot <- cnb_plot + geom_text(data=ann_text, y=num, label="*", size=15)
   }
   assign(paste0(test, '_plot'), cnb_plot)
 }
@@ -126,7 +126,7 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
 
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longCog3x3.pdf', width=8, height=6)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longCog3x3.pdf', width=7.5, height=6)
 ADT_plot
 CPF_plot
 CPT_plot

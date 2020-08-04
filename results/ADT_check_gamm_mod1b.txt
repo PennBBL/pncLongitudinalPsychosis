@@ -1,0 +1,18 @@
+
+'gamm' based fit - care required with interpretation.
+Checks based on working residuals may be misleading.
+Basis dimension (k) checking results. Low p-value (k-index<1) may
+indicate that k is too low, especially if edf is close to k'.
+
+                                k'   edf k-index p-value  
+s(Age):t1_tfinal_factorTD_OP 59.00  1.00    0.97   0.065 .
+s(Age):t1_tfinal_factorTD_PS 59.00  1.00    0.97   0.110  
+s(Age):t1_tfinal_factorOP_TD 59.00  2.27    0.97   0.075 .
+s(Age):t1_tfinal_factorOP_OP 59.00  1.00    0.97   0.110  
+s(Age):t1_tfinal_factorOP_PS 59.00  1.00    0.97   0.080 .
+s(Age):t1_tfinal_factorPS_TD 59.00  1.00    0.97   0.170  
+s(Age):t1_tfinal_factorPS_OP 59.00  1.00    0.97   0.085 .
+s(Age):t1_tfinal_factorPS_PS 59.00  1.81    0.97   0.095 .
+s(Age)                       39.00  4.06    0.97   0.080 .
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
