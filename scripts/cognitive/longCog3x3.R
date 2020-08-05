@@ -15,6 +15,15 @@ library('gamm4')
 library('stringr')
 library('broom')
 library('tidyr')
+library('gratia')
+library('MASS')
+
+getUpperLowerCI <- function(i) {
+  sorted_vec <- unname(sort(fits[i,]))
+  lower <- sorted_vec[round(.025*length(sorted_vec))]
+  upper <- sorted_vec[round(.975*length(sorted_vec))]
+  c(lower, upper)
+}
 
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 names(clin_df)[names(clin_df) == 't1'] <- 'first_diagnosis'
@@ -52,13 +61,30 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
 
   cnb_test_df$t1_tfinal_factor <- factor(cnb_test_df$t1_tfinal)
 
-  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=60, bs="cr") +
-    s(Age, k=40, bs="cr"), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=10, bs="cr") +
+    s(Age, k=10, bs="cr"), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
     # August 4: Without the second term, just fitting an intercept for TD-TD
   capture.output(gam.check(mod1b$gam),
     file=paste0('~/Documents/pncLongitudinalPsychosis/results/', test, '_check_gamm_mod1b.txt'))
+
+  lp <- predict(mod1b$gam, newdata=cnb_test_df, type='lpmatrix')
+  coefs <- coef(mod1b$gam)
+  vc <- vcov(mod1b$gam)
+
+  sim <- mvrnorm(1000, mu = coefs, Sigma = vc)
+  fits <- lp %*% t(sim)
+
+  cis <- t(sapply(1:nrow(fits), getUpperLowerCI))
+  cis <- data.frame(cis)
+  names(cis) <- c('LCI', 'UCI')
+  cnb_test_df <- cbind(cnb_test_df, cis)
+
+  #CI <- confint(mod1b$gam, parm='s(Age):t1_tfinal_factorTD_OP', type='confidence')
+  # ^ Possible bugs in package discovered on August 5, 2020
+
   # ^ Can't get k-index above 1 (up to k=50), but k' is very far away from edf
-  #TO DO: Save check plots
+  # Will probably have to create own assumption checks, since mgcv's don't
+  # necessarily apply
 
   #mod2b <- gamm4(test ~ t2(Age_bl, Time, k=c(20, 5), bs='cr'), data=cnb_test_df,
   #  random=~(1|bblid)) # Need to calculate Age_bl and Time, and then figure out the fits
@@ -95,7 +121,9 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
     scale_color_manual(values=c('#009E73', '#CC79A7', '#0072B2')) +
     theme(legend.position = 'none', plot.title=element_text(size=14, face="bold"),
       plot.subtitle=element_text(size=8)) +
-    labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1)
+    labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1) +
+    geom_line(aes(y=LCI), size=.7, linetype=2, color='gray40') +
+    geom_line(aes(y=UCI), size=.7, linetype=2, color='gray40') 
 
   if (nrow(model_info) > 0) {
     # List the first-last pairs whose age trajectories significantly differ from TD-TD
