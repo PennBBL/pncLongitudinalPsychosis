@@ -41,6 +41,10 @@ cnb_df <- cnb_df[, c('bblid', 'Age', 'timepoint', 'Test', 'ACC_raw')]
 cnb_df <- cnb_df[cnb_df$bblid %in% clin_df$bblid,]
 cnb_df <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='ACC_raw')
 
+tests <- c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
+  'PLOT', 'PMAT', 'PVRT', 'TAP', 'VOLT')
+cnb_df[, tests] <- sapply(cnb_df[, tests], scale)
+
 getDiagnoses <- function(i) {
   bblid <- cnb_df[i, 'bblid']
   c(clin_df[clin_df$bblid == bblid, 'first_diagnosis'], clin_df[clin_df$bblid == bblid, 'last_diagnosis'], as.character(clin_df[clin_df$bblid == bblid, 't1_tfinal']))
@@ -53,8 +57,7 @@ cnb_df$last_diagnosis <- ordered(cnb_df$last_diagnosis, c('TD', 'OP', 'PS'))
 cnb_df$t1_tfinal <- ordered(cnb_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
   'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
 
-for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
-  'PLOT', 'PMAT', 'PVRT', 'TAP', 'VOLT')) {
+for (test in tests) {
   cnb_test_df <- cnb_df[!is.na(cnb_df[,test]),]
   row.names(cnb_test_df) <- 1:nrow(cnb_test_df)
   names(cnb_test_df)[names(cnb_test_df) == test] <- 'test'
@@ -123,7 +126,7 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
       plot.subtitle=element_text(size=8)) +
     labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1) +
     geom_line(aes(y=LCI), size=.7, linetype=2, color='gray40') +
-    geom_line(aes(y=UCI), size=.7, linetype=2, color='gray40') 
+    geom_line(aes(y=UCI), size=.7, linetype=2, color='gray40')
 
   if (nrow(model_info) > 0) {
     # List the first-last pairs whose age trajectories significantly differ from TD-TD
@@ -150,7 +153,8 @@ for (test in c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
 }
 
 # TO DO:
-# https://stackoverflow.com/questions/31075407/plot-mixed-effects-model-in-ggplot
+# https://stackoverflow.com/questions/31075407/plot-mixed-effects-model-in-ggplot (nvm)
+# Rescale for this longitudinal subset DONE
 
 
 
