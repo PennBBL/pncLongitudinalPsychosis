@@ -2,13 +2,15 @@
 ### 3x3 trajectories
 ###
 ### Ellyn Butler
-### July 23, 2020 - July 27, 2020
+### July 23, 2020 - August 10, 2020
 
 library('dplyr')
 library('reshape2')
 library('ggplot2')
 library('ggpubr')
 library('fastDummies')
+library('broom')
+library('stringr')
 
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n1601_demographics_go1_20161212.csv')
@@ -25,6 +27,9 @@ final_df$Female <- recode(final_df$sex, `2`=1, `1`=0)
 final_df$White <- recode(final_df$race, `1`=1, .default=0)
 final_df$first_diagnosis <- recode(final_df$first_diagnosis, 'other'='OP')
 final_df$last_diagnosis <- recode(final_df$last_diagnosis, 'other'='OP')
+final_df$t1_tfinal <- recode(final_df$t1_tfinal, 'other_other'='OP_OP',
+  'other_TD'='OP_TD', 'other_PS'='OP_PS', 'TD_other'='TD_OP', 'PS_other'='PS_OP')
+final_df <- within(final_df, t1_tfinal <- relevel(t1_tfinal, ref='TD_TD'))
 
 ptdvars <- c(paste0('ptd00', 1:4), paste0('ptd00', 6:9))
 final_df[, ptdvars] <- sapply(final_df[, ptdvars], na_if, y=9)
@@ -39,19 +44,19 @@ getPercent <- function(i, dataf) {
 }
 
 subtit <- paste0('Ns: TD-TD=', nrow(final_df[final_df$t1_tfinal == 'TD_TD',]),
-  ', TD-OP=', nrow(final_df[final_df$t1_tfinal == 'TD_other',]),
-  ', TD-PS=', nrow(final_df[final_df$t1_tfinal == 'TD_PS',]),
-  ', OP-TD=', nrow(final_df[final_df$t1_tfinal == 'other_TD',]),
-  ', OP-OP=', nrow(final_df[final_df$t1_tfinal == 'other_other',]),
-  ', OP-PS=', nrow(final_df[final_df$t1_tfinal == 'other_PS',]),
-  ', PS-TD=', nrow(final_df[final_df$t1_tfinal == 'PS_TD',]),
-  ', PS-OP=', nrow(final_df[final_df$t1_tfinal == 'PS_other',]),
-  ', PS-PS=', nrow(final_df[final_df$t1_tfinal == 'PS_PS',]))
+    ', TD-OP=', nrow(final_df[final_df$t1_tfinal == 'TD_OP',]),
+    ', TD-PS=', nrow(final_df[final_df$t1_tfinal == 'TD_PS',]),
+    ',\nOP-TD=', nrow(final_df[final_df$t1_tfinal == 'OP_TD',]),
+    ', OP-OP=', nrow(final_df[final_df$t1_tfinal == 'OP_OP',]),
+    ', OP-PS=', nrow(final_df[final_df$t1_tfinal == 'OP_PS',]),
+    ',\nPS-TD=', nrow(final_df[final_df$t1_tfinal == 'PS_TD',]),
+    ', PS-OP=', nrow(final_df[final_df$t1_tfinal == 'PS_OP',]),
+    ', PS-PS=', nrow(final_df[final_df$t1_tfinal == 'PS_PS',]))
 
 ################################ Types ################################
 
 final_type_df <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
-  c('Female', 'White', paste0('ptd00', 1:4), paste0('ptd00', 6:9)))
+  c('Female', 'White', ptdvars))
 names(final_type_df) <- c('first_diagnosis', 'last_diagnosis', 'Feature')
 
 final_type_df$Percent <- sapply(1:nrow(final_type_df), getPercent, dataf=final_type_df)
@@ -88,11 +93,22 @@ type_plot
 dev.off()
 
 
-
-
 ################################ Sum ################################
 
 final_df$NumTypesTraumas <- rowSums(final_df[, ptdvars])
+final_df$NumTypesTraumas2 <- final_df$NumTypesTraumas + .1
+mod_sum <- glm(NumTypesTraumas2 ~ I(t1_tfinal), data=final_df, family=Gamma())
+model_info <- tidy(mod_sum) %>% filter(str_detect(term, "t1_tfinal"))
+model_info <- model_info[model_info$p.value < .05,]
+diagcats <- gsub('factor', '', model_info$term)
+diagcats <- gsub('I\\(t1_tfinal\\)', '', diagcats)
+ann_text <- data.frame(t1_tfinal=diagcats, lab = "*", Feature='2+')
+int <- strsplit(as.character(ann_text$t1_tfinal), '_')
+ann_text$first_diagnosis <- sapply(int, `[[`, 1)
+ann_text$first_diagnosis <- paste(ann_text$first_diagnosis, '- First Diagnosis')
+ann_text$last_diagnosis <- sapply(int, `[[`, 2)
+ann_text$last_diagnosis <- paste(ann_text$last_diagnosis, '- Last Diagnosis')
+
 final_df$NumTypesTraumas <- recode(final_df$NumTypesTraumas, `0`=0, `1`=1, `2`=2,
   `3`=2, `4`=2, `5`=2, `6`=2, `7`=2)
 final_df$NumTypesTraumas <- factor(final_df$NumTypesTraumas)
@@ -113,26 +129,16 @@ final_sum_df$last_diagnosis <- recode(final_sum_df$last_diagnosis,
 final_sum_df$last_diagnosis <- ordered(final_sum_df$last_diagnosis,
   c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
-final_sum_df$type <- recode(final_sum_df$Feature, 'NumTypesTraumas_0'='fine',
-  'NumTypesTraumas_1'='bad', 'NumTypesTraumas_2'='bad')
-
-subtit <- paste0('Ns: TD-TD=', nrow(final_df[final_df$t1_tfinal == 'TD_TD',]),
-    ', TD-OP=', nrow(final_df[final_df$t1_tfinal == 'TD_other',]),
-    ', TD-PS=', nrow(final_df[final_df$t1_tfinal == 'TD_PS',]),
-    ',\nOP-TD=', nrow(final_df[final_df$t1_tfinal == 'other_TD',]),
-    ', OP-OP=', nrow(final_df[final_df$t1_tfinal == 'other_other',]),
-    ', OP-PS=', nrow(final_df[final_df$t1_tfinal == 'other_PS',]),
-    ',\nPS-TD=', nrow(final_df[final_df$t1_tfinal == 'PS_TD',]),
-    ', PS-OP=', nrow(final_df[final_df$t1_tfinal == 'PS_other',]),
-    ', PS-PS=', nrow(final_df[final_df$t1_tfinal == 'PS_PS',]))
-
-sum_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=type)) +
+final_sum_df$Feature <- as.character(final_sum_df$Feature)
+sum_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=Feature)) +
   theme_linedraw() + geom_bar(stat = 'identity') +
   facet_grid(first_diagnosis ~ last_diagnosis) +
   theme(legend.position='none') + coord_cartesian(ylim=c(0, 100)) +
   scale_x_discrete(breaks=c('NumTypesTraumas_0', 'NumTypesTraumas_1',
     'NumTypesTraumas_2'), labels=c('0', '1', '2+')) +
-  labs(title='Number of Types of Traumas', subtitle=subtit)
+  scale_fill_manual(values=c('white', 'green3', 'red', 'red')) +
+  labs(title='Number of Types of Traumas', subtitle=subtit) +
+  geom_text(data=ann_text, y=80, label="*", size=15) # August 11, 2020: Can't get colors and asterisks to work at the same time
 
 
 pdf(file='~/Documents/pncLongitudinalPsychosis/plots/traumaSum3x3.pdf', width=5, height=5.5)
@@ -148,9 +154,11 @@ final_df$threat <- rowSums(final_df[, c('ptd002', 'ptd006')])
 final_df$threat <- recode(final_df$threat, `0`=0, `1`=1, `2`=1)
 final_df$other <- rowSums(final_df[, c('ptd001', 'ptd007', 'ptd008', 'ptd009')])
 final_df$other <- recode(final_df$other, `0`=0, `1`=1, `2`=1, `3`=1, `4`=1)
+final_df$none <- rowSums(final_df[, ptdvars])
+final_df$none <- recode(final_df$other, `0`=1, `1`=0, `2`=0, `3`=0, `4`=0, `5`=0, `6`=0, `7`=0)
 
 final_assault_df <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
-  c('Female', 'White', 'assault', 'threat', 'other'))
+  c('none','assault', 'threat', 'other'))
 names(final_assault_df) <- c('first_diagnosis', 'last_diagnosis', 'Feature')
 
 final_assault_df$Percent <- sapply(1:nrow(final_assault_df), getPercent, dataf=final_assault_df)
@@ -164,17 +172,14 @@ final_assault_df$last_diagnosis <- recode(final_assault_df$last_diagnosis,
 final_assault_df$last_diagnosis <- ordered(final_assault_df$last_diagnosis,
   c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
-final_assault_df$type <- recode(final_assault_df$Feature, 'White'='demo', 'Female'='demo',
-    'assault'='ptd', 'threat'='ptd', 'other'='ptd')
-
-assault_plot <- ggplot(final_assault_df, aes(x=Feature, y=Percent, fill=type)) +
+assault_plot <- ggplot(final_assault_df, aes(x=Feature, y=Percent, fill=Feature)) +
   theme_linedraw() + geom_bar(stat = 'identity') +
   facet_grid(first_diagnosis ~ last_diagnosis) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position='none') +
-  coord_cartesian(ylim=c(0, 100)) +
+  coord_cartesian(ylim=c(0, 100)) + scale_fill_manual(values=c('green3', 'red', 'red', 'red')) +
   labs(title='Demographic and Traumatic Features by Diagnostic Bin', subtitle=subtit)
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/demoTraumaAssault3x3.pdf', width=9, height=7)
-assault_plot
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/trauma3x3.pdf', width=12, height=7)
+ggarrange(sum_plot, assault_plot, ncol=2)
 dev.off()
