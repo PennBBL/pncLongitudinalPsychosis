@@ -2,7 +2,7 @@
 ### 3x3 trajectories
 ###
 ### Ellyn Butler
-### July 23, 2020 - August 10, 2020
+### July 23, 2020 - August 11, 2020
 
 library('dplyr')
 library('reshape2')
@@ -102,12 +102,21 @@ model_info <- tidy(mod_sum) %>% filter(str_detect(term, "t1_tfinal"))
 model_info <- model_info[model_info$p.value < .05,]
 diagcats <- gsub('factor', '', model_info$term)
 diagcats <- gsub('I\\(t1_tfinal\\)', '', diagcats)
-ann_text <- data.frame(t1_tfinal=diagcats, lab = "*", Feature='2+')
+ann_text <- data.frame(t1_tfinal=diagcats, lab = '*', Feature='2+')
 int <- strsplit(as.character(ann_text$t1_tfinal), '_')
 ann_text$first_diagnosis <- sapply(int, `[[`, 1)
 ann_text$first_diagnosis <- paste(ann_text$first_diagnosis, '- First Diagnosis')
 ann_text$last_diagnosis <- sapply(int, `[[`, 2)
 ann_text$last_diagnosis <- paste(ann_text$last_diagnosis, '- Last Diagnosis')
+ann_text$first_diagnosis <- recode(ann_text$first_diagnosis,
+  'TD'='TD - First Diagnosis', 'OP'='OP - First Diagnosis', 'PS'='PS - First Diagnosis')
+ann_text$first_diagnosis <- ordered(ann_text$first_diagnosis,
+  c('TD - First Diagnosis', 'OP - First Diagnosis', 'PS - First Diagnosis'))
+ann_text$last_diagnosis <- recode(ann_text$last_diagnosis,
+  'TD'='TD - Last Diagnosis', 'OP'='OP - Last Diagnosis', 'PS'='PS - Last Diagnosis')
+ann_text$last_diagnosis <- ordered(ann_text$last_diagnosis,
+  c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
+
 
 final_df$NumTypesTraumas <- recode(final_df$NumTypesTraumas, `0`=0, `1`=1, `2`=2,
   `3`=2, `4`=2, `5`=2, `6`=2, `7`=2)
@@ -157,6 +166,43 @@ final_df$other <- recode(final_df$other, `0`=0, `1`=1, `2`=1, `3`=1, `4`=1)
 final_df$none <- rowSums(final_df[, ptdvars])
 final_df$none <- recode(final_df$other, `0`=1, `1`=0, `2`=0, `3`=0, `4`=0, `5`=0, `6`=0, `7`=0)
 
+# Conduct proportion tests
+ann_text <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
+  c('none','assault', 'threat', 'other'))
+names(ann_text) <- c('first_diagnosis', 'last_diagnosis', 'Feature')
+ann_text$t1_tfinal <- paste(ann_text$first_diagnosis, ann_text$last_diagnosis, sep='_')
+ann_text <- ann_text[ann_text$t1_tfinal != 'TD_TD',]
+row.names(ann_text) <- 1:nrow(ann_text)
+
+testPropTDTD <- function(i) {
+  feat <- as.character(ann_text[i, 'Feature'])
+  group <- as.character(ann_text[i, 't1_tfinal'])
+  N_tdtd <- nrow(final_df[final_df$t1_tfinal == 'TD_TD' & !is.na(final_df[,feat]),])
+  X_tdtd <- nrow(final_df[final_df$t1_tfinal == 'TD_TD' & final_df[,feat] == 1
+    & !is.na(final_df[,feat]),])
+  N_group <- nrow(final_df[final_df$t1_tfinal == group & !is.na(final_df[,feat]),])
+  X_group <- nrow(final_df[final_df$t1_tfinal == group & final_df[,feat] == 1
+    & !is.na(final_df[,feat]),])
+  prop.test(c(X_tdtd, X_group), c(N_tdtd, N_group))$p.value
+}
+ann_text$p.value <- sapply(1:nrow(ann_text), testPropTDTD)
+ann_text$p.value <- p.adjust(ann_text$p.value, method='hochberg') # for independent tests
+ann_text <- ann_text[ann_text$p.value < .05,]
+ann_text$first_diagnosis <- recode(ann_text$first_diagnosis,
+  'TD'='TD - First Diagnosis', 'OP'='OP - First Diagnosis', 'PS'='PS - First Diagnosis')
+ann_text$first_diagnosis <- ordered(ann_text$first_diagnosis,
+  c('TD - First Diagnosis', 'OP - First Diagnosis', 'PS - First Diagnosis'))
+ann_text$last_diagnosis <- recode(ann_text$last_diagnosis,
+  'TD'='TD - Last Diagnosis', 'OP'='OP - Last Diagnosis', 'PS'='PS - Last Diagnosis')
+ann_text$last_diagnosis <- ordered(ann_text$last_diagnosis,
+  c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
+ann_text$lab <- '*'
+
+
+
+
+
+
 final_assault_df <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
   c('none','assault', 'threat', 'other'))
 names(final_assault_df) <- c('first_diagnosis', 'last_diagnosis', 'Feature')
@@ -177,7 +223,8 @@ assault_plot <- ggplot(final_assault_df, aes(x=Feature, y=Percent, fill=Feature)
   facet_grid(first_diagnosis ~ last_diagnosis) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position='none') +
   coord_cartesian(ylim=c(0, 100)) + scale_fill_manual(values=c('green3', 'red', 'red', 'red')) +
-  labs(title='Demographic and Traumatic Features by Diagnostic Bin', subtitle=subtit)
+  labs(title='Trauma Types by Diagnostic Bin', subtitle=subtit) +
+  geom_text(data=ann_text, y=80, label="*", size=15)
 
 
 pdf(file='~/Documents/pncLongitudinalPsychosis/plots/trauma3x3.pdf', width=12, height=7)
