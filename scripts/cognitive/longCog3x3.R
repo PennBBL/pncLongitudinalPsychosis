@@ -64,8 +64,8 @@ for (test in tests) {
 
   cnb_test_df$t1_tfinal_factor <- factor(cnb_test_df$t1_tfinal)
 
-  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=10, bs="cr") +
-    s(Age, k=10, bs="cr"), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=10, bs='cr') +
+    s(Age, k=10, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
     # August 4: Without the second term, just fitting an intercept for TD-TD
   capture.output(gam.check(mod1b$gam),
     file=paste0('~/Documents/pncLongitudinalPsychosis/results/', test, '_check_gamm_mod1b.txt'))
