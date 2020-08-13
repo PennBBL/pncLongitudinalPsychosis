@@ -1,9 +1,8 @@
-### This script does an exploratory factor analysis of the longitudinal CNB
-### data, without accounting for repeated measures. As such, it is important
-### that this ultimately be redone.
+### This script checks if the factor loadings and scree plot indicate more than
+### one dimension when using the age regressed tests
 ###
 ### Ellyn Butler
-### August 11, 2020 - August 12, 2020
+### August 13, 2020
 
 set.seed(20)
 
@@ -16,16 +15,16 @@ library('psych')
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 
 cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/CNB_Longitudinal_Core_11February2020.csv')
-cnb_df <- cnb_df[, c('bblid', 'Age', 'timepoint', 'Test', 'ACC_raw', 'RT_raw')]
+cnb_df <- cnb_df[, c('bblid', 'Age', 'timepoint', 'Test', 'ACC_ar', 'RT_ar')]
 cnb_df <- cnb_df[cnb_df$bblid %in% clin_df$bblid,]
 
 # Reverse code the RT data (want faster to be higher)
-cnb_df$RT_raw <- -cnb_df$RT_raw
+cnb_df$RT_raw <- -cnb_df$RT_ar
 
-cnb_df1 <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='ACC_raw')
+cnb_df1 <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='ACC_ar')
 names(cnb_df1) <- c('bblid', 'Age', 'Timepoint',
   paste0(names(cnb_df1)[4:length(names(cnb_df1))], '_ACC'))
-cnb_df2 <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='RT_raw')
+cnb_df2 <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='RT_ar')
 names(cnb_df2) <- c('bblid', 'Age', 'Timepoint',
   paste0(names(cnb_df2)[4:length(names(cnb_df2))], '_RT'))
 cnb_df <- merge(cnb_df1, cnb_df2)
@@ -84,7 +83,7 @@ for (type in types) {
   assign(paste0(type, '_loadings_df'), loadings_df)
 }
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/eigenAccRtEff.pdf', width=12, height=4)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/eigenAccRtEff_ageregressed.pdf', width=12, height=4)
 ggarrange(ACC_eigen_plot, RT_eigen_plot, EFF_eigen_plot, ncol=3)
 dev.off()
 
@@ -92,7 +91,7 @@ dev.off()
 loadings_df <- rbind(ACC_loadings_df, RT_loadings_df, EFF_loadings_df)
 loadings_df <- round(loadings_df, digits=4)
 
-write.csv(loadings_df, '~/Documents/pncLongitudinalPsychosis/results/factorLoadings.csv')
+write.csv(loadings_df, '~/Documents/pncLongitudinalPsychosis/results/factorLoadings_ageregressed.csv')
 
 
 

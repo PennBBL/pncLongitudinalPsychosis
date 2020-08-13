@@ -4,13 +4,13 @@ Checks based on working residuals may be misleading.
 Basis dimension (k) checking results. Low p-value (k-index<1) may
 indicate that k is too low, especially if edf is close to k'.
 
-                                k'   edf k-index p-value
-s(Age):t1_tfinal_factorTD_OP 59.00  1.00    1.02    0.80
-s(Age):t1_tfinal_factorTD_PS 59.00  1.00    1.02    0.78
-s(Age):t1_tfinal_factorOP_TD 59.00  1.00    1.02    0.82
-s(Age):t1_tfinal_factorOP_OP 59.00  1.00    1.02    0.76
-s(Age):t1_tfinal_factorOP_PS 59.00  3.23    1.02    0.81
-s(Age):t1_tfinal_factorPS_TD 59.00  1.00    1.02    0.79
-s(Age):t1_tfinal_factorPS_OP 59.00  1.00    1.02    0.77
-s(Age):t1_tfinal_factorPS_PS 59.00  2.03    1.02    0.76
-s(Age)                       39.00  5.72    1.02    0.82
+                               k'  edf k-index p-value
+s(Age):t1_tfinal_factorTD_OP 9.00 1.00    1.02    0.78
+s(Age):t1_tfinal_factorTD_PS 9.00 1.00    1.02    0.81
+s(Age):t1_tfinal_factorOP_TD 9.00 1.00    1.02    0.79
+s(Age):t1_tfinal_factorOP_OP 9.00 1.00    1.02    0.78
+s(Age):t1_tfinal_factorOP_PS 9.00 1.00    1.02    0.82
+s(Age):t1_tfinal_factorPS_TD 9.00 1.00    1.02    0.77
+s(Age):t1_tfinal_factorPS_OP 9.00 1.00    1.02    0.81
+s(Age):t1_tfinal_factorPS_PS 9.00 2.06    1.02    0.80
+s(Age)                       9.00 5.50    1.02    0.83
