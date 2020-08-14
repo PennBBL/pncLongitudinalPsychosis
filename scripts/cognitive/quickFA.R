@@ -33,7 +33,8 @@ cnb_df <- merge(cnb_df1, cnb_df2)
 tests <- c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
   'PLOT', 'PMAT', 'PVRT', 'VOLT') # August 12, 2020: Got rid of TAP
 
-cnb_df[, tests] <- sapply(cnb_df[, c(paste0(tests, '_ACC'), paste0(tests, '_RT'))], scale)
+cnb_df[, c(paste0(tests, '_ACC'), paste0(tests, '_RT'))] <- sapply(cnb_df[,
+  c(paste0(tests, '_ACC'), paste0(tests, '_RT'))], scale) ####
 tmp_df <- cnb_df
 tmp_df <- tmp_df[!is.na(tmp_df$ADT) & !is.na(tmp_df$CPF) & !is.na(tmp_df$CPT) &
   !is.na(tmp_df$CPW) & !is.na(tmp_df$ER40) & !is.na(tmp_df$MEDF) &
