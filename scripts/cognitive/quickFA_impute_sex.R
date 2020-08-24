@@ -1,9 +1,11 @@
 ### This script does an exploratory factor analysis of the longitudinal CNB
 ### data, without accounting for repeated measures. In addition, it imputes
-### missing data.
+### missing data. It plots the data by sex, tests for sex differences within
+### diagnostic groups, and includes MPRAXIS (speed) and TAP (speed) in the
+### factor analysis.
 ###
 ### Ellyn Butler
-### August 11, 2020 - August 13, 2020
+### August 24, 2020
 
 set.seed(20)
 
@@ -39,6 +41,8 @@ clin_df$t1_tfinal <- recode(clin_df$t1_tfinal, 'TD_TD'='TD_TD', 'TD_other'='TD_O
   'TD_PS'='TD_PS', 'other_TD'='OP_TD', 'other_other'='OP_OP', 'other_PS'='OP_PS',
   'PS_TD'='PS_TD', 'PS_other'='PS_OP', 'PS_PS'='PS_PS')
 
+demo_df <- read.csv('')
+
 cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/CNB_Longitudinal_Core_11February2020.csv')
 cnb_df <- cnb_df[, c('bblid', 'Age', 'timepoint', 'Test', 'ACC_raw', 'RT_raw')]
 cnb_df <- cnb_df[cnb_df$bblid %in% clin_df$bblid,]
@@ -54,11 +58,31 @@ names(cnb_df2) <- c('bblid', 'Age', 'Timepoint',
   paste0(names(cnb_df2)[4:length(names(cnb_df2))], '_RT'))
 cnb_df <- merge(cnb_df1, cnb_df2)
 
-tests <- c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
-  'PLOT', 'PMAT', 'PVRT', 'VOLT') # August 12, 2020: Got rid of TAP
+# Remove TAP_RT, and rename TAP_ACC to TAP_RT
+cnb_df <- cnb_df[,!(names(cnb_df) %in% c('TAP_RT', 'MPRAXIS_ACC'))]
+names(cnb_df)[names(cnb_df) == 'TAP_ACC'] <- 'TAP_RT'
 
-cnb_df[, c(paste0(tests, '_ACC'), paste0(tests, '_RT'))] <- sapply(cnb_df[,
-  c(paste0(tests, '_ACC'), paste0(tests, '_RT'))], scale)
+tests_acc <- c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
+  'PLOT', 'PMAT', 'PVRT', 'VOLT')
+tests_rt <- c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
+  'PLOT', 'PMAT', 'PVRT', 'VOLT', 'TAP', 'MPRAXIS')
+
+cnb_df[, c(paste0(tests_acc, '_ACC'), paste0(tests_rt, '_RT'))] <- sapply(cnb_df[,
+  c(paste0(tests_acc, '_ACC'), paste0(tests_rt, '_RT'))], scale)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 getDiagnoses <- function(i) {
   bblid <- cnb_df[i, 'bblid']
