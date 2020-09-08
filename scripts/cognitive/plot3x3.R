@@ -28,115 +28,12 @@ getUpperLowerCI <- function(i) {
   c(lower, upper)
 }
 
-clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
-names(clin_df)[names(clin_df) == 't1'] <- 'first_diagnosis'
-names(clin_df)[names(clin_df) == 'tfinal2'] <- 'last_diagnosis'
-clin_df$first_diagnosis <- as.character(clin_df$first_diagnosis)
-clin_df$last_diagnosis <- as.character(clin_df$last_diagnosis)
-clin_df$first_diagnosis <- recode(clin_df$first_diagnosis, 'TD'='TD', 'other'='OP', 'PS'='PS')
-clin_df$last_diagnosis <- recode(clin_df$last_diagnosis, 'TD'='TD', 'other'='OP', 'PS'='PS')
-clin_df$t1_tfinal <- recode(clin_df$t1_tfinal, 'TD_TD'='TD_TD', 'TD_other'='TD_OP',
-  'TD_PS'='TD_PS', 'other_TD'='OP_TD', 'other_other'='OP_OP', 'other_PS'='OP_PS',
-  'PS_TD'='PS_TD', 'PS_other'='PS_OP', 'PS_PS'='PS_PS')
-
-cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/CNB_Longitudinal_Core_11February2020.csv')
-cnb_df <- cnb_df[, c('bblid', 'Age', 'timepoint', 'Test', 'ACC_raw', 'RT_raw')]
-cnb_df <- cnb_df[cnb_df$bblid %in% clin_df$bblid,]
-
-# Reverse code the RT data (want faster to be higher)
-cnb_df$RT_raw <- -cnb_df$RT_raw
-
-cnb_df1 <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='ACC_raw')
-names(cnb_df1) <- c('bblid', 'Age', 'Timepoint',
-  paste0(names(cnb_df1)[4:length(names(cnb_df1))], '_ACC'))
-cnb_df2 <- dcast(cnb_df, bblid + Age + timepoint ~ Test, value.var='RT_raw')
-names(cnb_df2) <- c('bblid', 'Age', 'Timepoint',
-  paste0(names(cnb_df2)[4:length(names(cnb_df2))], '_RT'))
-cnb_df <- merge(cnb_df1, cnb_df2)
-
-tests <- c('ADT', 'CPF', 'CPT', 'CPW', 'ER40', 'MEDF', 'NBACK', 'PCET',
-  'PLOT', 'PMAT', 'PVRT', 'VOLT') # August 12, 2020: Got rid of TAP
-
-cnb_df[, c(paste0(tests, '_ACC'), paste0(tests, '_RT'))] <- sapply(cnb_df[,
-  c(paste0(tests, '_ACC'), paste0(tests, '_RT'))], scale)
-
-getDiagnoses <- function(i) {
-  bblid <- cnb_df[i, 'bblid']
-  c(clin_df[clin_df$bblid == bblid, 'first_diagnosis'], clin_df[clin_df$bblid == bblid, 'last_diagnosis'], as.character(clin_df[clin_df$bblid == bblid, 't1_tfinal']))
-}
-
-cnb_df[,c('first_diagnosis', 'last_diagnosis', 't1_tfinal')] <- t(sapply(1:nrow(cnb_df), getDiagnoses))
-
-cnb_df$first_diagnosis <- ordered(cnb_df$first_diagnosis, c('TD', 'OP', 'PS'))
-cnb_df$last_diagnosis <- ordered(cnb_df$last_diagnosis, c('TD', 'OP', 'PS'))
-cnb_df$t1_tfinal <- ordered(cnb_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
-  'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
-#cnb_df$t1_tfinal <- relevel(factor(cnb_df$t1_tfinal), ref='TD_TD')
-# ^ August 26, 2020: Probably want to change to this
-
-tmp_df <- cnb_df
-
-# Impute data
-tmp_df[, c(paste0(tests, '_ACC'), paste0(tests, '_RT'))] <- missForest(tmp_df[,
-  c(paste0(tests, '_ACC'), paste0(tests, '_RT'))])$ximp
-
-# Calculate efficiency
-calcEfficiency <- function(test) {
-  rowMeans(tmp_df[, c(paste0(test, '_ACC'), paste0(test, '_RT'))])
-}
-tmp_df[, paste0(tests, '_EFF')] <- sapply(tests, calcEfficiency)
-tmp_df[, paste0(tests, '_EFF')] <- sapply(tmp_df[, paste0(tests, '_EFF')], scale)
-
-# Get factor scores and save loadings
-types <- c('ACC', 'RT', 'EFF')
-numfactors <- 1:4
-
-for (type in types) {
-  cnb_eigenvalues <- eigen(cor(tmp_df[, paste0(tests, '_', type)]))$values
-  eigen_df <- data.frame(matrix(NA, nrow=length(cnb_eigenvalues), ncol=2))
-  names(eigen_df) <- c("compnum", "eigen")
-  eigen_df$compnum <- 1:length(tests)
-  eigen_df$eigen <- cnb_eigenvalues
-
-  eigen_plot <- ggplot(eigen_df, aes(x=compnum, y=eigen)) +
-    geom_line(stat="identity") + geom_point() +  theme_minimal() +
-    xlab("Component Number") + ylab("Eigenvalues of Components") +
-    scale_y_continuous(limits=c(0, 6)) + ggtitle(paste0(type,': Scree Plot')) +
-    theme(plot.title = element_text(size=12), axis.title = element_text(size=10),
-      axis.text = element_text(size=6))
-  assign(paste0(type, '_eigen_plot'), eigen_plot)
-
-  for (numfs in numfactors) {
-    fanal <- fa(tmp_df[, paste0(tests, '_', type)], nfactors=numfs, rotate='oblimin')
-    if (numfs == 1) {
-      loadings_df <- unclass(fanal$loadings)
-      colnames(loadings_df) <- paste0('Soln', numfs, '_', colnames(loadings_df))
-    } else {
-      loadings_tmp_df <- unclass(fanal$loadings)
-      colnames(loadings_tmp_df) <- paste0('Soln', numfs, '_', colnames(loadings_tmp_df))
-      loadings_df <- cbind(loadings_df, loadings_tmp_df)
-    }
-    #factor_info <- factor.scores(tmp_df[, paste0(tests, '_', type)], fanal)
-    tmp_df[, paste0(type, '_Soln', numfs, '_MR', 1:numfs)] <- fanal$scores
-  }
-  loadings_df <- loadings_df[, sort(colnames(loadings_df))]
-  assign(paste0(type, '_loadings_df'), loadings_df)
-}
-
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/eigenAccRtEff_impute.pdf', width=12, height=4)
-ggarrange(ACC_eigen_plot, RT_eigen_plot, EFF_eigen_plot, ncol=3)
-dev.off()
-
-
-loadings_df <- rbind(ACC_loadings_df, RT_loadings_df, EFF_loadings_df)
-loadings_df <- round(loadings_df, digits=4)
-
-write.csv(loadings_df, '~/Documents/pncLongitudinalPsychosis/results/factorLoadings_impute.csv')
-
-
-
 
 ###################### Plot factor scores ######################
+
+tmp_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cnb_quickFA_impute_sex.csv')
+tmp_df$t1_tfinal <- ordered(tmp_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
+  'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
 
 plotcols <- c(paste0('ACC_Soln3_MR', 1:3), paste0('RT_Soln3_MR', 1:3),
   paste0('EFF_Soln4_MR', 1:4))
@@ -149,6 +46,10 @@ for (test in plotcols) {
 
   mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=10, bs='cr') +
     s(Age, k=10, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+
+  #mod1b_unordered <- gamm4(test ~ s(Age, by=t1_tfinal, k=10, bs='cr') +
+    #s(Age, k=10, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+    # September 2, 2020: Apparently turning 't1_tfinal' into a factor was unnecessary
   capture.output(gam.check(mod1b$gam),
     file=paste0('~/Documents/pncLongitudinalPsychosis/results/', test, '_check_gamm_mod1b.txt'))
 
@@ -225,7 +126,7 @@ for (test in plotcols) {
 }
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longFactorImpute3x3.pdf', width=7.5, height=6)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute3x3.pdf', width=7.5, height=6)
 ACC_Soln3_MR1_plot
 ACC_Soln3_MR2_plot
 ACC_Soln3_MR3_plot

@@ -39,7 +39,7 @@ plotcols <- c(paste0('ACC_Soln3_MR', 1:3), paste0('RT_Soln3_MR', 1:3),
   paste0('EFF_Soln4_MR', 1:4))
 
 for (test in plotcols) {
-  cnb_test_df <- tmp_df
+  cnb_test_df <- cnb_df
   names(cnb_test_df)[names(cnb_test_df) == test] <- 'test'
 
   cnb_test_df$sex <- factor(cnb_test_df$sex)
@@ -47,10 +47,10 @@ for (test in plotcols) {
 
   #cnb_test_df$sex_t1_tfinal_factor <- paste0(cnb_test_df$sex, cnb_test_df$t1_tfinal_factor)
 
-  #mod1b <- gamm4(test ~ s(Age, k=10, bs='cr') + s(Age, by=sex, k=10, bs='cr') +
-  #  s(Age, by=t1_tfinal_factor, k=10, bs='cr') +
-  #  s(Age, by=sex*t1_tfinal_factor, k=10, bs='cr'),
-  #  data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+  mod1b <- gamm4(test ~ s(Age, k=10, bs='cr') + s(Age, by=sex, k=10, bs='cr') +
+    s(Age, by=t1_tfinal_factor, k=10, bs='cr') +
+    s(Age, by=sex:t1_tfinal_factor, k=10, bs='cr'),
+    data=cnb_test_df, random=~(1|bblid), REML=TRUE)
     # August 25, 2020: Desired model matrix after dropping columns, but not sure
     # how to specify correctly so that dropping isn't needed. But t1_tfinal_factor
     # had to be an ordered factor for this to work
@@ -114,7 +114,7 @@ for (test in plotcols) {
   cnb_plot <- ggplot(cnb_test_df, aes(x=Age, y=test, color=sex)) +
     theme_linedraw() + geom_line(aes(group=bblid), alpha=.2) +
     facet_grid(first_diagnosis ~ last_diagnosis) +
-    scale_color_manual(values=c('blue', 'red')) +
+    scale_color_manual(values=c('red', 'blue')) +
     theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
       plot.subtitle=element_text(size=8)) +
     labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1) +

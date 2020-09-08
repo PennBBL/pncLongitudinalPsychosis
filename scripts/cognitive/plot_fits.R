@@ -1,4 +1,4 @@
-### This script plots just the fits for the factors derived from quickFA_impute_sex.R
+### This script plots just the fits for the factors derived in quickFAImpute.R
 ###
 ### Ellyn Butler
 ### August 27, 2020
@@ -80,6 +80,6 @@ for (test in plotcols) {
   assign(paste0(test, '_plot'), cnb_plot)
 }
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/longFactorImpute_TDTD_PSPS.pdf', width=7.5, height=6)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_TDTD_PSPS.pdf', width=7.5, height=6)
 ggarrange(EFF_Soln4_MR1_plot, EFF_Soln4_MR2_plot, EFF_Soln4_MR3_plot, EFF_Soln4_MR4_plot, nrow=2, ncol=2)
 dev.off()
