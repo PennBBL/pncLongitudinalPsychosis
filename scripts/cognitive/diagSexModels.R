@@ -7,6 +7,7 @@
 
 # September 8, 2020: Bart says look into documentation on 'by' in mgcv to
 # understand why factor need to be ordered
+#https://stat.ethz.ch/R-manual/R-patched/library/mgcv/html/gam.models.html
 
 set.seed(20)
 

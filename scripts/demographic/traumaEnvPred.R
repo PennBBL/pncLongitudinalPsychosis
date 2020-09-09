@@ -2,7 +2,7 @@
 ### 3x3 trajectories
 ###
 ### Ellyn Butler
-### September 8, 2020
+### September 8, 2020 - September 9, 2020
 
 library('dplyr')
 library('sjPlot')
@@ -82,12 +82,16 @@ mod3.2 <- glm(PS_final ~ envHouseholds*first_diagnosis, family='binomial', data=
 all_models_env <- tab_model(mod1, mod2.2, mod3.2)
 
 
+###### Does the interaction between trauma and environment predict? ######
+
+mod2.3 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envHouseholds, family='binomial', data=final_df)
+
+mod3.3 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envHouseholds, family='binomial', data=final_df)
+
+mod4.3 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds, family='binomial', data=final_df)
 
 
-
-
-
-
+all_models_both <- tab_model(mod1, mod2, mod2.3, mod3.3, mod4.3)
 
 
 
