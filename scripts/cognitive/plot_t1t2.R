@@ -23,7 +23,9 @@ names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
 cnb_df$Sex <- relevel(cnb_df$Sex, 'Male')
 #cnb_df$t1_tfinal <- relevel(cnb_df$t1_tfinal, 'TD_TD')
 
-cogcols <- c('SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
+cnb_df$SMSSpeed <- rowMeans(cnb_df[, c('TAP_RT', 'MPRAXIS_RT')])
+
+cogcols <- c('SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF', 'SMSSpeed')
 
 # Filter for the first two visits
 cnb_df <- cnb_df[cnb_df$Timepoint %in% 1:2, ]
@@ -54,6 +56,8 @@ summary_df <- long_df %>%
         group_by(Timepoint, Sex, Test, first_diagnosis, last_diagnosis) %>%
         summarise(Score = mean(Score))
 
+summary_df$Test <- ordered(summary_df$Test, c('Exec_EFF', 'Mem_EFF',
+  'CompCog_EFF', 'SocCog_EFF', 'SMSSpeed'))
 
 cnb_plot <- ggplot(summary_df, aes(Timepoint, Score, group=Sex, colour=Sex)) +
   theme_linedraw() +
@@ -66,6 +70,6 @@ cnb_plot <- ggplot(summary_df, aes(Timepoint, Score, group=Sex, colour=Sex)) +
 	scale_color_manual(values=c('blue', 'red'), guide = guide_legend(nrow=1))
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnb_t1t2.pdf', width=18, height=8)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnb_t1t2.pdf', width=22, height=8)
 cnb_plot
 dev.off()

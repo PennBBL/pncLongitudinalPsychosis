@@ -2,7 +2,7 @@
 ### 3x3 trajectories
 ###
 ### Ellyn Butler
-### September 8, 2020 - September 9, 2020
+### September 8, 2020 - September 11, 2020
 
 library('dplyr')
 library('sjPlot')
@@ -82,6 +82,11 @@ mod3.2 <- glm(PS_final ~ envHouseholds*first_diagnosis, family='binomial', data=
 all_models_env <- tab_model(mod1, mod2.2, mod3.2)
 
 
+
+
+
+###############################################################################
+
 ###### Does the interaction between trauma and environment predict? ######
 
 mod2.3 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envHouseholds, family='binomial', data=final_df)
@@ -90,14 +95,26 @@ mod3.3 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envHouseholds, family
 
 mod4.3 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds, family='binomial', data=final_df)
 
+mod5.3 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds*sex, family='binomial', data=final_df) #Wildly overfit
 
 all_models_both <- tab_model(mod1, mod2, mod2.3, mod3.3, mod4.3)
 
+##### Within first diagnosis groups
 
+#### TD
+for (diag in c('TD', 'OP', 'PS')) {
+  mod1 <- glm(PS_final ~ sex, family='binomial',
+    data=final_df[final_df$first_diagnosis == diag, ])
+  mod2 <- glm(PS_final ~ sex + num_type_trauma,
+    family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
+  mod3 <- glm(PS_final ~ sex + num_type_trauma + envHouseholds,
+    family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
+  mod4 <- glm(PS_final ~ sex + num_type_trauma + envHouseholds +
+    sex:num_type_trauma + num_type_trauma:envHouseholds + sex:envHouseholds,
+    family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
+  mod5 <- glm(PS_final ~ sex*num_type_trauma*envHouseholds,
+      family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
 
-
-
-
-
-
-#
+  mods <- tab_model(mod1, mod2, mod3, mod4, mod5)
+  assign(paste0('mods_', diag), mods)
+}
