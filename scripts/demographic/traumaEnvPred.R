@@ -11,7 +11,6 @@ library('ggplot2')
 library('ggpubr')
 library('fastDummies')
 
-
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n1601_demographics_go1_20161212.csv')
 env_df <- read.csv('~/Documents/traumaInformant/data/n9498_go1_environment_factor_scores_tymoore_20150909.csv')
@@ -62,6 +61,18 @@ mod3 <- glm(PS_final ~ num_type_trauma*first_diagnosis, family='binomial', data=
 
 all_models_trauma <- tab_model(mod1, mod2, mod3)
 
+final_df$PS_final_I <- recode(final_df$PS_final, 'Yes'=1, 'No'=0)
+trauma_plot <- ggplot(final_df, aes(x=num_type_trauma, y=PS_final_I,
+  group=first_diagnosis, colour=first_diagnosis)) +
+  theme_linedraw() + geom_point(shape=1, position=position_jitter(width=.1,
+    height=.05)) + ylab('PS final') +
+  scale_colour_manual(values = c('slategray2', 'deeppink3', 'black')) +
+  stat_smooth(method='glm', method.args=list(family='binomial'), se=FALSE) +
+  theme(legend.position='bottom')
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/traumaLogistic.pdf', width=6, height=5)
+trauma_plot
+dev.off()
 
 ###### Does neighborhood environment predict final time point PS status? ######
 
@@ -81,10 +92,23 @@ mod3.2 <- glm(PS_final ~ envHouseholds*first_diagnosis, family='binomial', data=
 
 all_models_env <- tab_model(mod1, mod2.2, mod3.2)
 
+env_plot <- ggplot(final_df, aes(x=envHouseholds, y=PS_final_I,
+  group=first_diagnosis, colour=first_diagnosis)) +
+  theme_linedraw() + geom_point(shape=1, position=position_jitter(width=.1,
+    height=.05)) + ylab('PS final') +
+  scale_colour_manual(values = c('slategray2', 'deeppink3', 'black')) +
+  stat_smooth(method='glm', method.args=list(family='binomial'), se=FALSE) +
+  theme(legend.position='bottom')
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/envLogistic.pdf', width=6, height=5)
+env_plot
+dev.off()
 
 
 
 
+###############################################################################
+###############################################################################
 ###############################################################################
 
 ###### Does the interaction between trauma and environment predict? ######

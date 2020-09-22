@@ -1,7 +1,7 @@
 ### This script plots just the fits for the factors derived in quickFAImpute.R
 ###
 ### Ellyn Butler
-### August 27, 2020
+### August 27, 2020 - September 21, 2020
 
 
 library('dplyr')
@@ -19,6 +19,15 @@ final_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cnb_quickFA_impu
 final_df$t1_tfinal <- ordered(final_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
   'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
 
+names(final_df)[names(final_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
+names(final_df)[names(final_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
+names(final_df)[names(final_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
+names(final_df)[names(final_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
+
+final_df$oT1_Tfinal <- ordered(final_df$t1_tfinal, c('TD_TD', 'OP_OP', 'OP_PS',
+  'OP_TD', 'PS_OP', 'PS_PS', 'PS_TD', 'TD_OP', 'TD_PS'))
+
+
 getUpperLowerCI <- function(i) {
   sorted_vec <- unname(sort(fits[i,]))
   lower <- sorted_vec[round(.025*length(sorted_vec))]
@@ -28,7 +37,7 @@ getUpperLowerCI <- function(i) {
 
 ###################### Plot factor scores ######################
 
-plotcols <- paste0('EFF_Soln4_MR', 1:4)
+plotcols <- c('SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
 
 for (test in plotcols) {
   cnb_test_df <- final_df
@@ -36,7 +45,7 @@ for (test in plotcols) {
 
   cnb_test_df$t1_tfinal_factor <- factor(cnb_test_df$t1_tfinal)
 
-  mod1b <- gamm4(test ~ s(Age, by=t1_tfinal_factor, k=10, bs='cr') +
+  mod1b <- gamm4(test ~ t1_tfinal +  s(Age, by=oT1_Tfinal, k=10, bs='cr') +
     s(Age, k=10, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
     # August 27, 2020: Ordering t1_tfinal fixes the need to drop a coefficient
 
@@ -80,6 +89,18 @@ for (test in plotcols) {
   assign(paste0(test, '_plot'), cnb_plot)
 }
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_TDTD_PSPS.pdf', width=7.5, height=6)
-ggarrange(EFF_Soln4_MR1_plot, EFF_Soln4_MR2_plot, EFF_Soln4_MR3_plot, EFF_Soln4_MR4_plot, nrow=2, ncol=2)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_SocCog_EFF_TDTD_PSPS.pdf', width=4, height=4)
+SocCog_EFF_plot
+dev.off()
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_Exec_EFF_TDTD_PSPS.pdf', width=4, height=4)
+Exec_EFF_plot
+dev.off()
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_Mem_EFF_TDTD_PSPS.pdf', width=4, height=4)
+Mem_EFF_plot
+dev.off()
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_CompCog_EFF_TDTD_PSPS.pdf', width=4, height=4)
+CompCog_EFF_plot
 dev.off()
