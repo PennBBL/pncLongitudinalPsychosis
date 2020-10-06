@@ -14,11 +14,11 @@ library('gamm4')
 library('stringr')
 library('MASS')
 library('broom')
+library('sjPlot')
 
 final_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cnb_quickFA_impute_sex.csv')
 
-final_df$t1_tfinal <- ordered(final_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
-  'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
+final_df$t1_tfinal <- relevel(final_df$t1_tfinal, 'TD_TD')
 
 names(final_df)[names(final_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
 names(final_df)[names(final_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
