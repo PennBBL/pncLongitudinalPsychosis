@@ -1,5 +1,5 @@
-### This script makes plot of baseline demographic and trauma features by
-### 3x3 trajectories
+### This script tests if the time difference between first and last assessments
+### explains any variance in final PS status.
 ###
 ### Ellyn Butler
 ### October 5, 2020
@@ -24,12 +24,12 @@ names(final_df)[names(final_df) == 't1'] <- 'first_diagnosis'
 names(final_df)[names(final_df) == 'tfinal2'] <- 'last_diagnosis'
 final_df$Female <- recode(final_df$sex, `2`=1, `1`=0)
 final_df$White <- recode(final_df$race, `1`=1, .default=0)
-final_df$first_diagnosis <- recode(final_df$first_diagnosis, 'other'='NotPS', 'TD'='NotPS')
+final_df$first_diagnosis <- recode(final_df$first_diagnosis, 'other'='OP')
 final_df$last_diagnosis <- recode(final_df$last_diagnosis, 'other'='OP')
 final_df$t1_tfinal <- recode(final_df$t1_tfinal, 'other_other'='OP_OP',
   'other_TD'='OP_TD', 'other_PS'='OP_PS', 'TD_other'='TD_OP', 'PS_other'='PS_OP')
 final_df <- within(final_df, t1_tfinal <- relevel(t1_tfinal, ref='TD_TD'))
-final_df <- within(final_df, first_diagnosis <- relevel(first_diagnosis, ref='NotPS'))
+final_df <- within(final_df, first_diagnosis <- relevel(first_diagnosis, ref='TD'))
 
 ptdvars <- c(paste0('ptd00', 1:4), paste0('ptd00', 6:9))
 final_df[, ptdvars] <- sapply(final_df[, ptdvars], na_if, y=9)
@@ -40,22 +40,40 @@ final_df$PS_final <- recode(final_df$tfinal, 'other'='No', 'PS'='Yes',
 
 final_df$num_type_trauma <- rowSums(final_df[, ptdvars])
 
-final_df$sex <- recode(final_df$sex, `2`='Female', `1`='Male')
-final_df$sex <- as.factor(final_df$sex)
-final_df <- within(final_df, sex <- relevel(sex, ref='Male'))
+age_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cnb_quickFA_impute_sex.csv')
+age_df <- age_df[, c('bblid', 'Age', 'Timepoint')]
 
-###############################################################################
+getFirstLastAge <- function(i) {
+  bblid <- age_df[i, 'bblid']
+  age_first <- min(age_df[age_df$bblid == bblid, 'Age'])
+  age_last <- max(age_df[age_df$bblid == bblid, 'Age'])
+  c(age_first, age_last)
+}
 
-mod0 <- glm(PS_final ~ first_diagnosis, family='binomial', data=final_df)
+age_df[, c('age_first', 'age_last')] <- t(sapply(1:nrow(age_df), getFirstLastAge))
 
-mod1 <- glm(PS_final ~ first_diagnosis + num_type_trauma, family='binomial', data=final_df)
+age_df <- age_df[!duplicated(age_df$bblid), ] #N=699
+age_df$timediff_t1_tfinal <- age_df$age_last - age_df$age_first
 
-mod2 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envHouseholds, family='binomial', data=final_df)
+final_df <- merge(final_df, age_df[, c('bblid', 'timediff_t1_tfinal')])
 
-mod3 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envHouseholds, family='binomial', data=final_df)
+######### Does # of trauma types predict final time point PS status? #########
 
-mod4 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds, family='binomial', data=final_df)
+mod0 <- glm(PS_final ~ timediff_t1_tfinal, family='binomial', data=final_df)
 
-mod5 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds*sex, family='binomial', data=final_df) #Wildly overfit
+mod1 <- glm(PS_final ~ timediff_t1_tfinal + first_diagnosis, family='binomial', data=final_df)
 
-all_models_both <- tab_model(mod0, mod1, mod2, mod3, mod4, mod5)
+mod2 <- glm(PS_final ~ timediff_t1_tfinal + first_diagnosis + num_type_trauma, family='binomial', data=final_df)
+
+#Answer: Yes
+
+# Does baseline diagnosis moderate the relationship between final time
+# point PS status and number of types of traumas such that there is a stronger
+# relationship between number of trauma types and final PS status among those
+# who were PS at baseline than those who were OP or TD?
+
+mod3 <- glm(PS_final ~ timediff_t1_tfinal + num_type_trauma*first_diagnosis, family='binomial', data=final_df)
+
+#Answer: No
+
+all_models_trauma <- tab_model(mod0, mod1, mod2, mod3)
