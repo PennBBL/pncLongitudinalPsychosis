@@ -1,5 +1,5 @@
 #clear workspace
-setwd("~/Box/pncLongitudinalPsychosis/data")
+setwd()
 #start code
 library(ggplot2)
 #install.packages("devtools")
@@ -22,8 +22,8 @@ library(car)
 library(visreg)
 
 
-diagnosist <-read.csv("clinical/pnc_longitudinal_diagnosis_n752_202007.csv")
-time2dates <-read.csv("clinical/pnc_longitudinal_diagnosis_n752_longwdates_202007.csv")
+diagnosis <-read.csv("~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv")
+time2dates <-read.csv("~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202007.csv")
 Diagnosiswgroups1 <- merge(diagnosis, time2dates, by.x ="bblid", all.x = FALSE)
 
 
