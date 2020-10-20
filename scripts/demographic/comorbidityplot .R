@@ -1,7 +1,6 @@
 #clear workspace
-setwd("~/Documents/JENNA pnc longituidinal psychosis ")
+setwd("~/Box/pncLongitudinalPsychosis/data")
 #start code
-source("summary_se_function.R")
 library(ggplot2)
 #install.packages("devtools")
 library(devtools)
@@ -23,8 +22,8 @@ library(car)
 library(visreg)
 
 
-diagnosis <-read.csv("pnc_longitudinal_diagnosis_n752_202007.csv")
-time2dates <-read.csv("pnc_longitudinal_diagnosis_n752_longwdates_202007.csv")
+diagnosist <-read.csv("clinical/pnc_longitudinal_diagnosis_n752_202007.csv")
+time2dates <-read.csv("clinical/pnc_longitudinal_diagnosis_n752_longwdates_202007.csv")
 Diagnosiswgroups1 <- merge(diagnosis, time2dates, by.x ="bblid", all.x = FALSE)
 
 
