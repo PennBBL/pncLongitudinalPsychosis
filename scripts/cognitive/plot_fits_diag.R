@@ -16,7 +16,7 @@ library('MASS')
 library('broom')
 library('sjPlot')
 
-final_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cnb_quickFA_impute_sex.csv')
+final_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2020-10-20.csv')
 
 final_df$t1_tfinal <- relevel(final_df$t1_tfinal, 'TD_TD')
 

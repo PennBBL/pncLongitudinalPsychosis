@@ -3,7 +3,7 @@
 ### that this ultimately be redone.
 ###
 ### Ellyn Butler
-### August 11, 2020 - August 12, 2020
+### August 11, 2020 - August 12, 2020 (Patch October 19, 2020)
 
 set.seed(20)
 
@@ -12,6 +12,7 @@ library('reshape2')
 library('ggplot2')
 library('ggpubr')
 library('psych')
+library('missForest')
 
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 names(clin_df)[names(clin_df) == 't1'] <- 'first_diagnosis'
@@ -24,11 +25,36 @@ clin_df$t1_tfinal <- recode(clin_df$t1_tfinal, 'TD_TD'='TD_TD', 'TD_other'='TD_O
   'TD_PS'='TD_PS', 'other_TD'='OP_TD', 'other_other'='OP_OP', 'other_PS'='OP_PS',
   'PS_TD'='PS_TD', 'PS_other'='PS_OP', 'PS_PS'='PS_PS')
 
-demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n1601_demographics_go1_20161212.csv')
+demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
+demo_df <- demo_df[, c('bblid', 'sex', 'race', 'ethnicity')]
 
 cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/CNB_Longitudinal_Core_11February2020.csv')
-cnb_df <- cnb_df[, c('bblid', 'Age', 'timepoint', 'Test', 'ACC_raw', 'RT_raw')]
+cnb_df <- cnb_df[, c('bblid', 'Age', 'Test', 'ACC_raw', 'RT_raw')]
 cnb_df <- cnb_df[cnb_df$bblid %in% clin_df$bblid,]
+
+#### Calculate timepoint (ADDED OCTOBER 19, 2020) ####
+bblids <- unique(cnb_df$bblid)
+
+getTimepoint <- function(i) {
+  bblid <- cnb_df[i, 'bblid']
+  ages <- cnb_df[cnb_df$bblid == bblid, 'Age']
+  ages <- sort(unique(ages))
+  # Return timepoint
+  which(ages == cnb_df[i, 'Age'])
+}
+
+cnb_df$timepoint <- sapply(1:nrow(cnb_df), getTimepoint)
+
+#### Get rid of assessments done in the same month for the same person
+cnb_df$bblid_Age_Test <- paste(cnb_df$bblid, cnb_df$Age, cnb_df$Test, sep='_')
+cnb_df <- cnb_df[!duplicated(cnb_df$bblid_Age_Test),]
+
+
+
+
+
+
+
 
 # Reverse code the RT data (want faster to be higher)
 cnb_df$RT_raw <- -cnb_df$RT_raw
@@ -65,8 +91,6 @@ cnb_df[,c('first_diagnosis', 'last_diagnosis', 't1_tfinal')] <- t(sapply(1:nrow(
 
 cnb_df$first_diagnosis <- ordered(cnb_df$first_diagnosis, c('TD', 'OP', 'PS'))
 cnb_df$last_diagnosis <- ordered(cnb_df$last_diagnosis, c('TD', 'OP', 'PS'))
-#cnb_df$t1_tfinal <- ordered(cnb_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
-#  'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
 cnb_df$t1_tfinal <- relevel(factor(cnb_df$t1_tfinal), ref='TD_TD')
 
 tmp_df <- cnb_df
@@ -117,6 +141,20 @@ for (type in types) {
     tmp_df[, paste0(type, '_Soln', numfs, '_MR', 1:numfs)] <- fanal$scores
   }
   loadings_df <- loadings_df[, sort(colnames(loadings_df))]
+  loadings_df <- as.data.frame(loadings_df)
+  # Sort rows
+  if (nrow(loadings_df) == 12) {
+    loadings_df$desiredOrder <- c(10, 7, 4, 8, 11, 12, 5, 6, 1, 2, 3, 9)
+    loadings_df <- loadings_df[order(loadings_df$desiredOrder), ]
+    loadings_df$Domain <- c(rep('ComCog', 3), rep('Exec', 3), rep('Mem', 3), rep('SocCog', 3))
+  } else {
+    loadings_df$desiredOrder <- c(10, 7, 4, 8, 11, 12, 5, 6, 1, 2, 3, 9, 13, 14)
+    loadings_df <- loadings_df[order(loadings_df$desiredOrder), ]
+    loadings_df$Domain <- c(rep('ComCog', 3), rep('Exec', 3), rep('Mem', 3), rep('SocCog', 3), rep('SMSpeed', 2))
+  }
+  loadings_df <- loadings_df[, names(loadings_df) != 'desiredOrder']
+  loadings_df$Test <- row.names(loadings_df)
+  loadings_df <- loadings_df[, c(11, 12, 1:10)]
   assign(paste0(type, '_loadings_df'), loadings_df)
 }
 
@@ -126,8 +164,20 @@ dev.off()
 
 
 loadings_df <- rbind(ACC_loadings_df, RT_loadings_df, EFF_loadings_df)
-loadings_df <- round(loadings_df, digits=4)
+loadings_df[, grep('MR', names(loadings_df), value=TRUE)] <- round(loadings_df[, grep('MR', names(loadings_df), value=TRUE)], digits=4)
 
-write.csv(loadings_df, '~/Documents/pncLongitudinalPsychosis/results/factorLoadings_impute_sex.csv')
+write.csv(loadings_df, paste0('~/Documents/pncLongitudinalPsychosis/results/factorLoadings_impute_', Sys.Date(),'.csv'), row.names=FALSE)
 
-write.csv(tmp_df, '~/Documents/pncLongitudinalPsychosis/data/cnb_quickFA_impute_sex.csv', row.names=FALSE)
+write.csv(tmp_df, paste0('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_', Sys.Date(), '.csv'), row.names=FALSE)
+
+
+
+
+
+
+
+
+
+
+
+#

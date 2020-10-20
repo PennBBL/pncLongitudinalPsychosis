@@ -2,7 +2,7 @@
 ### cognitive domain.
 ###
 ### Ellyn Butler
-### October 5, 2020 (new data October 19, 2020)
+### October 19, 2020 - October 20, 2020
 
 set.seed(20)
 
@@ -12,6 +12,7 @@ library('reshape2')
 library('ggh4x')
 
 cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2020-10-20.csv')
+tmp_df <- cnb_df
 
 names(cnb_df)[names(cnb_df) == 'sex'] <- 'Sex'
 
@@ -39,20 +40,36 @@ cnb_df$SMSSpeed <- lm(SMSSpeed ~ Age + agesq + agecu, data=cnb_df)$residuals
 
 
 # Filter for the first two visits
-cnb_df <- cnb_df[cnb_df$Timepoint %in% 1:2, ]
-cnb_df <- cnb_df[, c('bblid', 'Age', 'Timepoint', 'Sex', 'first_diagnosis',
-  'last_diagnosis', cogcols)]
+cnb_df_t1 <- cnb_df[cnb_df$Timepoint == 1, ]
+cnb_df_t2 <- cnb_df[cnb_df$Timepoint == 2, ]
+if (sum(cnb_df_t1$bblid == cnb_df_t2$bblid) == nrow(cnb_df_t1)) {
+  cnb_df_t1[, paste0(cogcols, '_ar_diff')] <- cnb_df_t2[, cogcols] - cnb_df_t1[, cogcols]
+} else {
+  print('ACKKKKKKK')
+}
+cnb_df <- cnb_df_t1
+
+cnb_df$SocCog_EFF_ar_t1r_diff <- lm(SocCog_EFF_ar_diff ~ SocCog_EFF, data=cnb_df)$residuals
+cnb_df$Exec_EFF_ar_t1r_diff <- lm(Exec_EFF_ar_diff ~ SocCog_EFF, data=cnb_df)$residuals
+cnb_df$Mem_EFF_ar_t1r_diff <- lm(Mem_EFF_ar_diff ~ SocCog_EFF, data=cnb_df)$residuals
+cnb_df$CompCog_EFF_ar_t1r_diff <- lm(CompCog_EFF_ar_diff ~ SocCog_EFF, data=cnb_df)$residuals
+cnb_df$SMSSpeed_ar_t1r_diff <- lm(SMSSpeed_ar_diff ~ SocCog_EFF, data=cnb_df)$residuals
+
+
+cnb_df <- cnb_df[, c('bblid', 'Age', 'Sex', 'first_diagnosis',
+  'last_diagnosis', paste0(cogcols, '_ar_t1r_diff'))]
 
 # Rescale
-cnb_df[, cogcols] <- lapply(cnb_df[, cogcols], scale)
+cnb_df[, paste0(cogcols, '_ar_t1r_diff')] <- lapply(cnb_df[, paste0(cogcols, '_ar_t1r_diff')], scale)
 
 # Melt cognitive tests
-long_df <- reshape2::melt(cnb_df, c('bblid', 'Age', 'Timepoint', 'Sex',
-  'first_diagnosis', 'last_diagnosis'), cogcols)
+long_df <- reshape2::melt(cnb_df, c('bblid', 'Age', 'Sex',
+  'first_diagnosis', 'last_diagnosis'), paste0(cogcols, '_ar_t1r_diff'))
+
+
 names(long_df)[names(long_df) == 'variable'] <- 'Test'
 names(long_df)[names(long_df) == 'value'] <- 'Score'
 
-long_df$Timepoint <- recode(long_df$Timepoint, `1`='First', `2`='Second')
 
 long_df$first_diagnosis <- recode(long_df$first_diagnosis,
   'PS'='PS - First Diagnosis', 'OP'='OP - First Diagnosis', 'TD'='TD - First Diagnosis')
@@ -64,20 +81,15 @@ long_df$last_diagnosis <- ordered(long_df$last_diagnosis,
   c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
 summary_df <- long_df %>%
-        group_by(Timepoint, Sex, Test, first_diagnosis, last_diagnosis) %>%
+        group_by(Sex, Test, first_diagnosis, last_diagnosis) %>%
         summarise(Score = mean(Score))
 
-summary_df$Test <- ordered(summary_df$Test, c('Exec_EFF', 'Mem_EFF',
-  'CompCog_EFF', 'SocCog_EFF', 'SMSSpeed'))
-
-#summary_df$Time_Sex_Test <- paste(summary_df$Timepoint, summary_df$Sex, summary_df$Test, sep='_')
-summary_df$Time_Test <- paste(summary_df$Timepoint, summary_df$Test, sep='_')
-Z <- 1:10
-summary_df$Segment <- rep(Z, rep(9, 20))
+testorder <- c('Exec_EFF', 'Mem_EFF', 'CompCog_EFF', 'SocCog_EFF', 'SMSSpeed')
+summary_df$Test <- ordered(summary_df$Test, paste0(testorder, '_ar_t1r_diff'))
 
 #https://stackoverflow.com/questions/27005299/ggplot-error-using-linetype-and-group-aesthetics
 
-cnb_plot <- ggplot(summary_df, aes(Test, Score, group=interaction(Sex, Timepoint), colour=Sex, linetype=Timepoint)) +
+cnb_plot <- ggplot(summary_df, aes(Test, Score, group=Sex, colour=Sex)) +
   theme_linedraw() + facet_nested(first_diagnosis ~ last_diagnosis) + ylim(-.8, .8) +
     	geom_hline(yintercept=0) +
       geom_line(data=summary_df, stat='identity', size=2) +
@@ -88,6 +100,6 @@ cnb_plot <- ggplot(summary_df, aes(Test, Score, group=interaction(Sex, Timepoint
 
 
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnb_t1t2_ageregressed.pdf', width=8, height=7)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnb_t1t2_diffAgeT1Regressed.pdf', width=8, height=7)
 cnb_plot
 dev.off()

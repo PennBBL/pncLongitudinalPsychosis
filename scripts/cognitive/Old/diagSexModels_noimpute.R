@@ -77,23 +77,20 @@ cnb_df$first_diagnosis <- ordered(cnb_df$first_diagnosis, c('TD', 'OP', 'PS'))
 cnb_df$last_diagnosis <- ordered(cnb_df$last_diagnosis, c('TD', 'OP', 'PS'))
 cnb_df$t1_tfinal <- relevel(factor(cnb_df$t1_tfinal), ref='TD_TD')
 
-
+# FILTER FOR ONLY TD_TDs
+cnb_df <- cnb_df[cnb_df$t1_tfinal == 'TD_TD', ]
+row.names(cnb_df) <- 1:nrow(cnb_df)
 
 
 #################################### GAMMs ####################################
 
 cnb_df$sex <- as.factor(as.character(cnb_df$sex))
 cnb_df$sex <- relevel(cnb_df$sex, 'Male')
-cnb_df$t1_tfinal <- relevel(cnb_df$t1_tfinal, 'TD_TD')
 
 cnb_df$oSex <- ordered(cnb_df$sex, c('Male', 'Female'))
 
-cnb_df$oT1_Tfinal <- ordered(cnb_df$t1_tfinal, c('TD_TD', 'OP_OP', 'OP_PS',
-  'OP_TD', 'PS_OP', 'PS_PS', 'PS_TD', 'TD_OP', 'TD_PS'))
-
 tests <- c('ADT_ACC', 'ER40_ACC', 'MEDF_ACC')
 
-test <- 'ADT_ACC'
 for (test in tests) {
   test_df <- cnb_df[!is.na(cnb_df[, test]), ]
   row.names(test_df) <- 1:nrow(test_df)
@@ -109,12 +106,5 @@ for (test in tests) {
   #tab_model(mod1_sex$gam, mod2_sex$gam, show.ci=FALSE, show.std="std2", digits.p=5, file=paste0('~/Documents/pncLongitudinalPsychosis/results/sex_', test, '.docx'))
   #tab_model(mod1_sex$gam, mod2_sex$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/sex_', test, '.docx'))
   #tab_model(mod1_sex$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/sex_', test, '.docx'))
-  print(tab_model(mod1_sex$gam, mod2_sex$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/sex_', test, '.doc')))
-
-  #### Diagnosis Models
-  mod1_diag <- gamm4(as.formula(paste0(test, " ~ t1_tfinal + s(Age, k=10, bs='cr')")),
-    data=cnb_df, random=~(1|bblid), REML=TRUE)
-  mod2_diag <- gamm4(as.formula(paste0(test, " ~ t1_tfinal + s(Age, k=10, bs='cr') +
-    s(Age, by=oT1_Tfinal, k=10, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
-  print(tab_model(mod1_diag$gam, mod2_diag$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/diag_', test, '.doc')))
+  print(tab_model(mod1_sex$gam, mod2_sex$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/sex_TDTD_', test, '.doc')))
 }

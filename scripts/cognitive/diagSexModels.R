@@ -3,7 +3,7 @@
 ### score.
 ###
 ### Ellyn Butler
-### September 8, 2020
+### September 8, 2020 (new data October 19, 2020)
 
 # September 8, 2020: Bart says look into documentation on 'by' in mgcv to
 # understand why factor need to be ordered
@@ -19,7 +19,7 @@ library('lme4')
 library('gamm4')
 library('sjPlot')
 
-cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cnb_quickFA_impute_sex.csv')
+cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2020-10-20.csv')
 
 names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
 names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
