@@ -3,7 +3,7 @@
 ### score.
 ###
 ### Ellyn Butler
-### September 8, 2020 (new data October 19, 2020)
+### September 8, 2020 - October 21, 2020 (new data October 20, 2020)
 
 # September 8, 2020: Bart says look into documentation on 'by' in mgcv to
 # understand why factor need to be ordered
@@ -34,13 +34,12 @@ cnb_df$oSex <- ordered(cnb_df$sex, c('Male', 'Female'))
 cnb_df$oT1_Tfinal <- ordered(cnb_df$t1_tfinal, c('TD_TD', 'OP_OP', 'OP_PS',
   'OP_TD', 'PS_OP', 'PS_PS', 'PS_TD', 'TD_OP', 'TD_PS'))
 
-################################## LMEM ##################################
-
-mod1_sex <- lmer(SocCog_EFF ~ sex + Age + (1|bblid), data=cnb_df)
-mod2_sex <- lmer(SocCog_EFF ~ sex*Age + (1|bblid), data=cnb_df)
-
-#mod1_diag <- lmer(SocCog_EFF ~ t1_tfinal + Age + (1|bblid), data=cnb_df)
-#mod2_diag <- lmer(SocCog_EFF ~ t1_tfinal*Age + (1|bblid), data=cnb_df)
+cnb_df$sex_t1_tfinal <- paste(cnb_df$sex, cnb_df$t1_tfinal, sep='_')
+cnb_df$oSex_oT1_Tfinal <- ordered(cnb_df$sex_t1_tfinal, c('Male_TD_TD',
+  'Male_OP_OP', 'Male_OP_PS', 'Male_OP_TD', 'Male_PS_OP', 'Male_PS_PS',
+  'Male_PS_TD', 'Male_TD_OP', 'Male_TD_PS', 'Female_TD_TD', 'Female_OP_OP',
+  'Female_OP_PS', 'Female_OP_TD', 'Female_PS_OP', 'Female_PS_PS', 'Female_PS_TD',
+  'Female_TD_OP', 'Female_TD_PS'))
 
 
 ################################## GAMMs ##################################
@@ -70,8 +69,11 @@ mod2_sex_diag <- gamm4(SocCog_EFF ~ sex + t1_tfinal + s(Age, k=10, bs='cr') +
   s(Age, by=oSex, k=10, bs='cr') + s(Age, by=oT1_Tfinal, k=10, bs='cr'),
   data=cnb_df, random=~(1|bblid), REML=TRUE)
 
+mod3_sex_diag <- gamm4(SocCog_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+
 all_models_sex_diag <- tab_model(mod1_sex$gam, mod2_sex$gam, mod1_sex_diag$gam,
-  mod2_sex_diag$gam)
+  mod2_sex_diag$gam, mod3_sex_diag$gam)
 
 
 ############## Executive Efficiency ##############
@@ -88,6 +90,9 @@ mod1_diag <- gamm4(Exec_EFF ~ t1_tfinal + s(Age, k=10, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
 mod2_diag <- gamm4(Exec_EFF ~ t1_tfinal + s(Age, k=10, bs='cr') +
   s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+
+mod3_sex_diag <- gamm4(Exec_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
@@ -107,6 +112,9 @@ mod1_diag <- gamm4(Mem_EFF ~ t1_tfinal + s(Age, k=10, bs='cr'), data=cnb_df,
 mod2_diag <- gamm4(Mem_EFF ~ t1_tfinal + s(Age, k=10, bs='cr') +
   s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
+mod3_sex_diag <- gamm4(Mem_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 
@@ -124,6 +132,9 @@ mod1_diag <- gamm4(CompCog_EFF ~ t1_tfinal + s(Age, k=10, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
 mod2_diag <- gamm4(CompCog_EFF ~ t1_tfinal + s(Age, k=10, bs='cr') +
   s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+
+mod3_sex_diag <- gamm4(CompCog_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 

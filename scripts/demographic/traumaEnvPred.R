@@ -46,16 +46,17 @@ final_df <- within(final_df, sex <- relevel(sex, ref='Male'))
 
 ###############################################################################
 
-mod0 <- glm(PS_final ~ first_diagnosis, family='binomial', data=final_df)
 
-mod1 <- glm(PS_final ~ first_diagnosis + num_type_trauma, family='binomial', data=final_df)
+mod1 <- glm(PS_final ~ first_diagnosis, family='binomial', data=final_df)
 
-mod2 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envHouseholds, family='binomial', data=final_df)
+mod2 <- glm(PS_final ~ first_diagnosis + num_type_trauma, family='binomial', data=final_df)
 
-mod3 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envHouseholds, family='binomial', data=final_df)
+mod3 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envHouseholds, family='binomial', data=final_df)
 
-mod4 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds, family='binomial', data=final_df)
+mod4 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envHouseholds, family='binomial', data=final_df)
 
-mod5 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds*sex, family='binomial', data=final_df) #Wildly overfit
+mod5 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds, family='binomial', data=final_df)
 
-all_models_both <- tab_model(mod0, mod1, mod2, mod3, mod4, mod5)
+mod6 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds*sex, family='binomial', data=final_df) #Wildly overfit
+
+all_models_both <- tab_model(mod1, mod2, mod3, mod4, mod5, mod6)

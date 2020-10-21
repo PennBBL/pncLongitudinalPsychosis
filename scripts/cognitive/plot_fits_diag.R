@@ -1,7 +1,7 @@
 ### This script plots just the fits for the factors derived in quickFAImpute.R
 ###
 ### Ellyn Butler
-### August 27, 2020 - October 5, 2020
+### August 27, 2020 - October 20, 2020
 
 set.seed(20)
 
@@ -40,6 +40,8 @@ getUpperLowerCI <- function(i) {
 
 plotcols <- c('SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
 
+diags <- as.character(unique(final_df$t1_tfinal)[!(unique(final_df$t1_tfinal) %in% c('TD_TD', 'PS_PS'))])
+
 for (test in plotcols) {
   cnb_test_df <- final_df
   names(cnb_test_df)[names(cnb_test_df) == test] <- 'test'
@@ -69,44 +71,47 @@ for (test in plotcols) {
 
   cnb_test_df$predgamm <- predict(mod1b$gam)
 
-  subtit <- paste0('Sessions: TD-TD=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',]),
-    ', OP-OP=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'OP_OP',]),
-    ', PS-PS=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'PS_PS',]))
+  for (group in diags) {
+    subtit <- paste0('Sessions: TD-TD=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',]),
+      ', ', group, '=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == group,]),
+      ', PS-PS=', nrow(cnb_test_df[cnb_test_df$t1_tfinal == 'PS_PS',]))
+    group_df <- cnb_test_df[cnb_test_df$t1_tfinal %in% c('TD_TD', group, 'PS_PS'), ]
+    group_df$t1_tfinal <- ordered(group_df$t1_tfinal, c('TD_TD', group, 'PS_PS'))
+    cnb_plot <- ggplot(group_df,
+        aes(x=Age, y=test, color=t1_tfinal)) + theme_linedraw() +
+      scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
+      theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
+        plot.subtitle=element_text(size=8)) +
+      labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1) +
+      geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',], aes(y=LCI),
+        size=.7, linetype=2, color='gray20') +
+      geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',], aes(y=UCI),
+        size=.7, linetype=2, color='gray20') +
+      geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == group,], aes(y=LCI),
+        size=.7, linetype=2, color='gray40') +
+      geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == group,], aes(y=UCI),
+        size=.7, linetype=2, color='gray40') +
+      geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'PS_PS',], aes(y=LCI),
+        size=.7, linetype=2, color='gray60') +
+      geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'PS_PS',], aes(y=UCI),
+        size=.7, linetype=2, color='gray60')
 
-  cnb_plot <- ggplot(cnb_test_df[cnb_test_df$t1_tfinal %in% c('TD_TD', 'OP_OP', 'PS_PS'), ],
-      aes(x=Age, y=test, color=t1_tfinal)) + theme_linedraw() +
-    scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
-    theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
-      plot.subtitle=element_text(size=8)) +
-    labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1) +
-    geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',], aes(y=LCI),
-      size=.7, linetype=2, color='gray20') +
-    geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'TD_TD',], aes(y=UCI),
-      size=.7, linetype=2, color='gray20') +
-    geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'OP_OP',], aes(y=LCI),
-      size=.7, linetype=2, color='gray40') +
-    geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'OP_OP',], aes(y=UCI),
-      size=.7, linetype=2, color='gray40') +
-    geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'PS_PS',], aes(y=LCI),
-      size=.7, linetype=2, color='gray60') +
-    geom_line(data=cnb_test_df[cnb_test_df$t1_tfinal == 'PS_PS',], aes(y=UCI),
-      size=.7, linetype=2, color='gray60')
+    assign(paste0(test, '_', group, '_plot'), cnb_plot)
 
-  assign(paste0(test, '_plot'), cnb_plot)
+    pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_', test, '_', group, '.pdf'), width=4, height=4)
+    print(cnb_plot)
+    dev.off()
+  }
 }
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_SocCog_EFF_TDTD_OPOP_PSPS.pdf', width=4, height=4)
-SocCog_EFF_plot
-dev.off()
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_Exec_EFF_TDTD_OPOP_PSPS.pdf', width=4, height=4)
-Exec_EFF_plot
-dev.off()
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_Mem_EFF_TDTD_OPOP_PSPS.pdf', width=4, height=4)
-Mem_EFF_plot
-dev.off()
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_CompCog_EFF_TDTD_OPOP_PSPS.pdf', width=4, height=4)
-CompCog_EFF_plot
-dev.off()
+
+
+
+
+
+
+
+#
