@@ -2,7 +2,7 @@
 ### 3x3 trajectories
 ###
 ### Ellyn Butler
-### October 5, 2020
+### October 5, 2020 (envHouseholds to envSES on November 5, 2020)
 
 library('dplyr')
 library('sjPlot')
@@ -24,12 +24,12 @@ names(final_df)[names(final_df) == 't1'] <- 'first_diagnosis'
 names(final_df)[names(final_df) == 'tfinal2'] <- 'last_diagnosis'
 final_df$Female <- recode(final_df$sex, `2`=1, `1`=0)
 final_df$White <- recode(final_df$race, `1`=1, .default=0)
-final_df$first_diagnosis <- recode(final_df$first_diagnosis, 'other'='NotPS', 'TD'='NotPS')
+final_df$first_diagnosis <- recode(final_df$first_diagnosis, 'other'='OP')
 final_df$last_diagnosis <- recode(final_df$last_diagnosis, 'other'='OP')
 final_df$t1_tfinal <- recode(final_df$t1_tfinal, 'other_other'='OP_OP',
   'other_TD'='OP_TD', 'other_PS'='OP_PS', 'TD_other'='TD_OP', 'PS_other'='PS_OP')
 final_df <- within(final_df, t1_tfinal <- relevel(t1_tfinal, ref='TD_TD'))
-final_df <- within(final_df, first_diagnosis <- relevel(first_diagnosis, ref='NotPS'))
+final_df <- within(final_df, first_diagnosis <- relevel(first_diagnosis, ref='TD'))
 
 ptdvars <- c(paste0('ptd00', 1:4), paste0('ptd00', 6:9))
 final_df[, ptdvars] <- sapply(final_df[, ptdvars], na_if, y=9)
@@ -51,12 +51,16 @@ mod1 <- glm(PS_final ~ first_diagnosis, family='binomial', data=final_df)
 
 mod2 <- glm(PS_final ~ first_diagnosis + num_type_trauma, family='binomial', data=final_df)
 
-mod3 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envHouseholds, family='binomial', data=final_df)
+mod3 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envSES, family='binomial', data=final_df)
 
-mod4 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envHouseholds, family='binomial', data=final_df)
+mod4 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envSES, family='binomial', data=final_df)
 
-mod5 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds, family='binomial', data=final_df)
+mod5 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envSES + first_diagnosis*num_type_trauma + first_diagnosis*envSES, family='binomial', data=final_df)
 
-mod6 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envHouseholds*sex, family='binomial', data=final_df) #Wildly overfit
+mod6 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envSES, family='binomial', data=final_df)
+
+
+
+#mod6 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envSES*sex, family='binomial', data=final_df) #Wildly overfit
 
 all_models_both <- tab_model(mod1, mod2, mod3, mod4, mod5, mod6)

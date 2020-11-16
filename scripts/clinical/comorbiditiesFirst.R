@@ -1,24 +1,34 @@
-### This script plots percentage of people with each comorbidity AT THE FINAL
+### This script plots percentage of people with each comorbidity AT THE FIRST
 ### TIME POINT in each of the nine longitudinally defined clinical groups
 ###
 ### Ellyn Butler
-### October 21, 2020
+### November 3, 2020
 
 library(dplyr)
 library(ggplot2)
 
 psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
-diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202007.csv')
+diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/n9498_goassess_psych_summary_vars_20131014.csv')
 demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
 
-diag_df <-  diag_df[diag_df$timepoint == paste0('t', diag_df$ntimepoints), ]
-row.names(diag_df) <- 1:nrow(diag_df)
+colsforplot <- grep('smry', names(diag_df), value=TRUE)
+colsforplot <- colsforplot[!(colsforplot %in% c('smry_prime_pos1', 'smry_prime_tot',
+  'smry_prime_pos2', 'smry_psych_overall_rtg', grep('del', names(diag_df), value=TRUE),
+  grep('hal', names(diag_df), value=TRUE)))]
+colsforplot <- gsub('smry_', '', colsforplot)
+
+
+diag_df <- diag_df %>%
+     mutate_at(grep('smry', names(diag_df), value=TRUE),
+      funs(recode(., `0`=0, `1`=0, `2`=0, `3`=0, `4`=1, .default = NaN)))
+
+diag_df <- diag_df[, !(names(diag_df) %in% c('smry_prime_pos1', 'smry_prime_tot',
+  'smry_prime_pos2', 'smry_psych_overall_rtg'))]
 
 final_df <- merge(psstat_df, diag_df)
 final_df <- merge(final_df, demo_df)
 
-
-names(final_df) <- gsub('dx_', '', names(final_df))
+names(final_df) <- gsub('smry_', '', names(final_df))
 names(final_df)[names(final_df) == 't1'] <- 'first_diagnosis'
 names(final_df)[names(final_df) == 'tfinal2'] <- 'last_diagnosis'
 final_df$Female <- recode(final_df$sex, `2`=1, `1`=0)
@@ -29,6 +39,7 @@ final_df$last_diagnosis <- recode(final_df$last_diagnosis, 'other'='OP')
 final_df$t1_tfinal <- recode(final_df$t1_tfinal, 'other_other'='OP_OP',
   'other_TD'='OP_TD', 'other_PS'='OP_PS', 'TD_other'='TD_OP', 'PS_other'='PS_OP')
 final_df <- within(final_df, t1_tfinal <- relevel(t1_tfinal, ref='TD_TD'))
+
 
 
 ### Define percent function
@@ -53,8 +64,13 @@ getSexN <- function(i, dataf) {
 
 
 ##### Get percents
+group_df <- read.csv('~/Documents/pncLongitudinalPsychosis/firstLastDiags.csv')
+group_df <- group_df[, c('First', 'Category')]
+group_df <- group_df[!is.na(group_df$First), ]
+names(group_df)[names(group_df) == 'First'] <- 'Feature'
+
 final_sum_df <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
-  names(final_df)[19:40])
+  colsforplot)
 names(final_sum_df) <- c('first_diagnosis', 'last_diagnosis', 'Feature')
 
 final_sum_df$Percent <- sapply(1:nrow(final_sum_df), getPercent, dataf=final_sum_df)
@@ -69,6 +85,8 @@ final_sum_df$last_diagnosis <- ordered(final_sum_df$last_diagnosis,
   c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
 final_sum_df$Feature <- as.character(final_sum_df$Feature)
+
+final_sum_df <- merge(final_sum_df, group_df, by='Feature')
 
 ##### Get female and males Ns
 ann_text <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
@@ -92,20 +110,34 @@ sex_labs <- paste0(ann_text[ann_text$Feature == 'Female', 'lab'], ', ',
 ann_text <- ann_text[1:9, names(ann_text) != 'Feature']
 ann_text$lab <- sex_labs
 
-ann_text$x <- 'moodnos'
+ann_text$x <- 'int_dep'
 ann_text$y <- 80
 
+final_sum_df$Feature <- paste(final_sum_df$Category, final_sum_df$Feature, sep='_')
+final_sum_df[grep('psy', final_sum_df$Feature), 'Feature'] <- gsub('psy_psy', 'psy',
+  final_sum_df[grep('psy', final_sum_df$Feature), 'Feature'])
+
+#final_sum_df$Feature <- ordered(final_sum_df$Feature, c('psy_del', 'psy_hal',
+#  'psy_hal_as', 'psy_hal_av', 'psy_hal_oh', 'psy_hal_th', 'psy_hal_vh', 'psy_hal_cat',
+#  'psy_psy_cat', 'int_agr', 'int_anx_cat', 'int_dep', 'int_gad', 'int_man', 'int_mood_cat',
+#  'int_ocd', 'int_pan', 'int_phb', 'int_ptd', 'int_sep', 'int_soc',
+#  'ext_add', 'ext_beh_cat', 'ext_odd', 'eat_ano', 'eat_bul', 'eat_eat_cat'))
+
+#final_sum_df$Category <- as.character(final_sum_df$Category)
+#final_sum_df$Order <- recode(final_sum_df$Category, 'psy'=1, 'int'=2, 'ext'=3, 'eat'=4)
+#final_sum_df$Feature <- with(final_sum_df, reorder(Feature, Order))
+#https://www.r-graph-gallery.com/267-reorder-a-variable-in-ggplot2.html
 
 ##### Plot
-comorbid_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=Feature)) +
+comorbid_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=Category)) +
   theme_linedraw() + geom_bar(stat='identity') +
   facet_grid(first_diagnosis ~ last_diagnosis) +
+  scale_fill_manual(values=c('green3', 'gold', 'deepskyblue2', 'red')) +
   theme(legend.position='none', axis.text.x=element_text(angle=45, hjust=1)) +
   coord_cartesian(ylim=c(0, 100)) +
-  #scale_fill_manual(values=c('red', 'pink')) +
-  labs(title='Comorbidities at Final Visit') +
+  labs(title='Comorbidities at First Visit') +
   geom_text(data=ann_text, mapping=aes(x = x, y = y, label=lab), hjust=-.05, inherit.aes=FALSE)
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/comorbid3x3.pdf', width=12, height=7)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/firstComorbid3x3.pdf', width=13, height=7)
 comorbid_plot
 dev.off()
