@@ -2,10 +2,10 @@
 ### TIME POINT in each of the nine longitudinally defined clinical groups
 ###
 ### Ellyn Butler
-### November 3, 2020
+### November 3, 2020 - November 30, 2020
 
-library(dplyr)
-library(ggplot2)
+library(dplyr) # Version 1.0.2
+library(ggplot2) # Version 3.3.2
 
 psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/n9498_goassess_psych_summary_vars_20131014.csv')
@@ -64,7 +64,7 @@ getSexN <- function(i, dataf) {
 
 
 ##### Get percents
-group_df <- read.csv('~/Documents/pncLongitudinalPsychosis/firstLastDiags.csv')
+group_df <- read.csv('~/Documents/pncLongitudinalPsychosis/info/firstLastDiags.csv')
 group_df <- group_df[, c('First', 'Category')]
 group_df <- group_df[!is.na(group_df$First), ]
 names(group_df)[names(group_df) == 'First'] <- 'Feature'
@@ -85,8 +85,8 @@ final_sum_df$last_diagnosis <- ordered(final_sum_df$last_diagnosis,
   c('TD - Last Diagnosis', 'OP - Last Diagnosis', 'PS - Last Diagnosis'))
 
 final_sum_df$Feature <- as.character(final_sum_df$Feature)
-
 final_sum_df <- merge(final_sum_df, group_df, by='Feature')
+
 
 ##### Get female and males Ns
 ann_text <- expand.grid(c('TD', 'OP', 'PS'), c('TD', 'OP', 'PS'),
@@ -110,12 +110,21 @@ sex_labs <- paste0(ann_text[ann_text$Feature == 'Female', 'lab'], ', ',
 ann_text <- ann_text[1:9, names(ann_text) != 'Feature']
 ann_text$lab <- sex_labs
 
-ann_text$x <- 'int_dep'
+ann_text$x <- 'dep'
 ann_text$y <- 80
 
-final_sum_df$Feature <- paste(final_sum_df$Category, final_sum_df$Feature, sep='_')
-final_sum_df[grep('psy', final_sum_df$Feature), 'Feature'] <- gsub('psy_psy', 'psy',
-  final_sum_df[grep('psy', final_sum_df$Feature), 'Feature'])
+final_sum_df$Feature <- gsub('_cat', '', final_sum_df$Feature)
+final_sum_df$Feature <- ordered(final_sum_df$Feature, c('ano', 'bul', 'eat', 'man',
+  'add', 'con', 'odd', 'dep', 'mood', 'anx', 'gad', 'ocd', 'pan', 'ptd', 'sep', 'soc',
+  'agr', 'phb', 'psy')) #Other, Externalizing, Depression, Anxiety, Phobia, Psychosis
+
+final_sum_df$Category <- ordered(final_sum_df$Category, c('Other', 'Externalizing',
+  'Depression', 'Anxiety', 'Phobia', 'Psychosis'))
+
+
+#final_sum_df$Feature <- paste(final_sum_df$Category, final_sum_df$Feature, sep='_')
+#final_sum_df[grep('psy', final_sum_df$Feature), 'Feature'] <- gsub('psy_psy', 'psy',
+#  final_sum_df[grep('psy', final_sum_df$Feature), 'Feature'])
 
 #final_sum_df$Feature <- ordered(final_sum_df$Feature, c('psy_del', 'psy_hal',
 #  'psy_hal_as', 'psy_hal_av', 'psy_hal_oh', 'psy_hal_th', 'psy_hal_vh', 'psy_hal_cat',
@@ -132,12 +141,12 @@ final_sum_df[grep('psy', final_sum_df$Feature), 'Feature'] <- gsub('psy_psy', 'p
 comorbid_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=Category)) +
   theme_linedraw() + geom_bar(stat='identity') +
   facet_grid(first_diagnosis ~ last_diagnosis) +
-  scale_fill_manual(values=c('green3', 'gold', 'deepskyblue2', 'red')) +
-  theme(legend.position='none', axis.text.x=element_text(angle=45, hjust=1)) +
+  scale_fill_manual(values=c('black', 'purple', 'green3', 'gold', 'deepskyblue2', 'red')) +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
   coord_cartesian(ylim=c(0, 100)) +
   labs(title='Comorbidities at First Visit') +
   geom_text(data=ann_text, mapping=aes(x = x, y = y, label=lab), hjust=-.05, inherit.aes=FALSE)
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/firstComorbid3x3.pdf', width=13, height=7)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/firstComorbid3x3.pdf', width=14, height=7)
 comorbid_plot
 dev.off()

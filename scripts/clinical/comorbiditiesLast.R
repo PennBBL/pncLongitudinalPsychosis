@@ -2,10 +2,10 @@
 ### TIME POINT in each of the nine longitudinally defined clinical groups
 ###
 ### Ellyn Butler
-### October 21, 2020 - November 5, 2020
+### October 21, 2020 - November 30, 2020
 
-library(dplyr)
-library(ggplot2)
+library(dplyr) # Version 1.0.2
+library(ggplot2) # Version 3.3.2
 
 psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202007.csv')
@@ -60,7 +60,7 @@ getSexN <- function(i, dataf) {
 
 
 ##### Get percents
-group_df <- read.csv('~/Documents/pncLongitudinalPsychosis/firstLastDiags.csv')
+group_df <- read.csv('~/Documents/pncLongitudinalPsychosis/info/firstLastDiags.csv')
 group_df <- group_df[, c('Last', 'Category')]
 group_df <- group_df[!is.na(group_df$Last), ]
 names(group_df)[names(group_df) == 'Last'] <- 'Feature'
@@ -106,21 +106,27 @@ sex_labs <- paste0(ann_text[ann_text$Feature == 'Female', 'lab'], ', ',
 ann_text <- ann_text[1:9, names(ann_text) != 'Feature']
 ann_text$lab <- sex_labs
 
-ann_text$x <- 'bon_sub_dep'
+ann_text$x <- 'sub_dep'
 ann_text$y <- 80
 
-final_sum_df$Feature <- paste(final_sum_df$Category, final_sum_df$Feature, sep='_')
+final_sum_df$Feature <- ordered(final_sum_df$Feature, c('bp1', 'bpoth', 'BrderPD',
+  'cogdis', 'other', 'sub_abuse', 'sub_abuse_alc', 'sub_abuse_can', 'sub_abuse_oth',
+  'sub_dep', 'sub_dep_alc', 'sub_dep_can', 'sub_dep_oth', 'adhd', 'mdd', 'moodnos',
+  'anx', 'ptsd', 'prodromal', 'prodromal_remit', 'psychosis', 'scz'))
+
+final_sum_df$Category <- ordered(final_sum_df$Category, c('Other', 'Externalizing',
+  'Depression', 'Anxiety', 'Psychosis'))
 
 ##### Plot
 comorbid_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=Category)) +
   theme_linedraw() + geom_bar(stat='identity') +
   facet_grid(first_diagnosis ~ last_diagnosis) +
-  scale_fill_manual(values=c('green3', 'gold', 'deepskyblue2', 'red')) +
-  theme(legend.position='none', axis.text.x=element_text(angle=45, hjust=1)) +
+  scale_fill_manual(values=c('black', 'purple', 'green3', 'gold', 'red')) +
+  theme(axis.text.x=element_text(angle=45, hjust=1)) +
   coord_cartesian(ylim=c(0, 100)) +
   labs(title='Comorbidities at Final Visit') +
   geom_text(data=ann_text, mapping=aes(x = x, y = y, label=lab), hjust=-.05, inherit.aes=FALSE)
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/lastComorbid3x3.pdf', width=13, height=7)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/lastComorbid3x3.pdf', width=14, height=7)
 comorbid_plot
 dev.off()
