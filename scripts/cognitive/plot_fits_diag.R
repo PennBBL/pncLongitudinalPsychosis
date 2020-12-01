@@ -48,8 +48,8 @@ for (test in plotcols) {
 
   cnb_test_df$t1_tfinal_factor <- factor(cnb_test_df$t1_tfinal)
 
-  mod1b <- gamm4(test ~ t1_tfinal +  s(Age, by=oT1_Tfinal, k=10, bs='cr') +
-    s(Age, k=10, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+  mod1b <- gamm4(test ~ t1_tfinal +  s(Age, by=oT1_Tfinal, k=4, bs='cr') +
+    s(Age, k=4, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
     # August 27, 2020: Ordering t1_tfinal fixes the need to drop a coefficient
 
   lp <- predict(mod1b$gam, newdata=cnb_test_df, type='lpmatrix')

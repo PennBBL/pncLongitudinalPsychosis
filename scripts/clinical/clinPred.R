@@ -2,12 +2,12 @@
 ### predicting final PS status
 ###
 ### Ellyn Butler
-### November 5, 2020
+### November 5, 2020 - November 30, 2020
 
-library('dplyr')
-library('sjPlot')
-library('reshape2')
-library('fastDummies')
+library('dplyr') # Version 1.0.2
+library('sjPlot') # Version 2.8.4
+library('reshape2') # Version 1.4.4
+library('fastDummies') # Version 1.6.1
 
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
 demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n1601_demographics_go1_20161212.csv')
@@ -16,7 +16,8 @@ ratdiag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/n9498
 
 colsforplot <- grep('smry', names(ratdiag_df), value=TRUE)
 colsforplot <- colsforplot[!(colsforplot %in% c('smry_prime_pos1', 'smry_prime_tot',
-  'smry_prime_pos2', 'smry_psych_overall_rtg'))]
+  'smry_prime_pos2', 'smry_psych_overall_rtg', grep('hal', colsforplot, value=TRUE),
+  grep('del', colsforplot, value=TRUE)))]
 
 ratdiag_df$ratings_sum <- scale(rowSums(ratdiag_df[, colsforplot]))
 

@@ -54,7 +54,7 @@ for (score in plotcols) {
 
   #mod1_diag <- gamm4(score ~ t1_tfinal + s(Age, k=10, bs='cr'), data=clin_score_df,
   #  random=~(1|bblid), REML=TRUE)
-  mod1b <- gamm4(score ~ t1_tfinal + s(Age, k=10, bs='cr') +
+  mod1b <- gamm4(score ~ t1_tfinal + s(Age, k=4, bs='cr') +
     s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=clin_score_df, random=~(1|bblid), REML=TRUE)
   #tab_model(mod1_diag, mod2_diag)
 

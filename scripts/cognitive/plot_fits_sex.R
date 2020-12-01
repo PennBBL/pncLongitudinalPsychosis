@@ -41,8 +41,8 @@ for (test in plotcols) {
   cnb_test_df <- final_df
   names(cnb_test_df)[names(cnb_test_df) == test] <- 'test'
 
-  mod1b <- gamm4(test ~ sex +  s(Age, by=oSex, k=10, bs='cr') +
-    s(Age, k=10, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
+  mod1b <- gamm4(test ~ sex +  s(Age, by=oSex, k=4, bs='cr') +
+    s(Age, k=4, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
 
   lp <- predict(mod1b$gam, newdata=cnb_test_df, type='lpmatrix')
   coefs <- coef(mod1b$gam)

@@ -46,31 +46,31 @@ cnb_df$oSex_oT1_Tfinal <- ordered(cnb_df$sex_t1_tfinal, c('Male_TD_TD',
 
 ############## Social Cognition Efficiency ##############
 #### Sex Models
-mod1_sex <- gamm4(SocCog_EFF ~ sex + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_sex <- gamm4(SocCog_EFF ~ sex + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_sex <- gamm4(SocCog_EFF ~ sex + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_sex <- gamm4(SocCog_EFF ~ sex + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_sex <- tab_model(mod1_sex$gam, mod2_sex$gam)
 
 #### Diagnosis Models
-mod1_diag <- gamm4(SocCog_EFF ~ t1_tfinal + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_diag <- gamm4(SocCog_EFF ~ t1_tfinal + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(SocCog_EFF ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(SocCog_EFF ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 #### Sex by Diagnosis Models
-mod1_sex_diag <- gamm4(SocCog_EFF ~ sex + t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod1_sex_diag <- gamm4(SocCog_EFF ~ sex + t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
-mod2_sex_diag <- gamm4(SocCog_EFF ~ sex + t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex, k=10, bs='cr') + s(Age, by=oT1_Tfinal, k=10, bs='cr'),
+mod2_sex_diag <- gamm4(SocCog_EFF ~ sex + t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex, k=4, bs='cr') + s(Age, by=oT1_Tfinal, k=4, bs='cr'),
   data=cnb_df, random=~(1|bblid), REML=TRUE)
 
-mod3_sex_diag <- gamm4(SocCog_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod3_sex_diag <- gamm4(SocCog_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_sex_diag <- tab_model(mod1_sex$gam, mod2_sex$gam, mod1_sex_diag$gam,
   mod2_sex_diag$gam, mod3_sex_diag$gam)
@@ -78,63 +78,63 @@ all_models_sex_diag <- tab_model(mod1_sex$gam, mod2_sex$gam, mod1_sex_diag$gam,
 
 ############## Executive Efficiency ##############
 #### Sex Models
-mod1_sex <- gamm4(Exec_EFF ~ sex + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_sex <- gamm4(Exec_EFF ~ sex + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_sex <- gamm4(Exec_EFF ~ sex + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_sex <- gamm4(Exec_EFF ~ sex + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_sex <- tab_model(mod1_sex$gam, mod2_sex$gam)
 
 #### Diagnosis Models
-mod1_diag <- gamm4(Exec_EFF ~ t1_tfinal + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_diag <- gamm4(Exec_EFF ~ t1_tfinal + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(Exec_EFF ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(Exec_EFF ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
-mod3_sex_diag <- gamm4(Exec_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod3_sex_diag <- gamm4(Exec_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 
 ############## Memory Efficiency ##############
 #### Sex Models
-mod1_sex <- gamm4(Mem_EFF ~ sex + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_sex <- gamm4(Mem_EFF ~ sex + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_sex <- gamm4(Mem_EFF ~ sex + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_sex <- gamm4(Mem_EFF ~ sex + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_sex <- tab_model(mod1_sex$gam, mod2_sex$gam)
 
 #### Diagnosis Models
-mod1_diag <- gamm4(Mem_EFF ~ t1_tfinal + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_diag <- gamm4(Mem_EFF ~ t1_tfinal + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(Mem_EFF ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(Mem_EFF ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
-mod3_sex_diag <- gamm4(Mem_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod3_sex_diag <- gamm4(Mem_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 
 ############## Complex Cognition Efficiency ##############
 #### Sex Models
-mod1_sex <- gamm4(CompCog_EFF ~ sex + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_sex <- gamm4(CompCog_EFF ~ sex + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_sex <- gamm4(CompCog_EFF ~ sex + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_sex <- gamm4(CompCog_EFF ~ sex + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_sex <- tab_model(mod1_sex$gam, mod2_sex$gam)
 
 #### Diagnosis Models
-mod1_diag <- gamm4(CompCog_EFF ~ t1_tfinal + s(Age, k=10, bs='cr'), data=cnb_df,
+mod1_diag <- gamm4(CompCog_EFF ~ t1_tfinal + s(Age, k=4, bs='cr'), data=cnb_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(CompCog_EFF ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(CompCog_EFF ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
-mod3_sex_diag <- gamm4(CompCog_EFF ~ sex*t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oSex_oT1_Tfinal, k=10, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
+mod3_sex_diag <- gamm4(CompCog_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oSex_oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 

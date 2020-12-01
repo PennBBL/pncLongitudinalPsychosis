@@ -41,52 +41,52 @@ names(clin_df)[names(clin_df) == 'age'] <- 'Age'
 ################################## GAMMs ##################################
 
 ############## Positive ##############
-mod1_diag <- gamm4(Positive ~ t1_tfinal + s(Age, k=10, bs='cr'), data=clin_df,
+mod1_diag <- gamm4(Positive ~ t1_tfinal + s(Age, k=4, bs='cr'), data=clin_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(Positive ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(Positive ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 ############## Negative ##############
-mod1_diag <- gamm4(Negative ~ t1_tfinal + s(Age, k=10, bs='cr'), data=clin_df,
+mod1_diag <- gamm4(Negative ~ t1_tfinal + s(Age, k=4, bs='cr'), data=clin_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(Negative ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(Negative ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 ############## Disorganized ##############
-mod1_diag <- gamm4(Disorganized ~ t1_tfinal + s(Age, k=10, bs='cr'), data=clin_df,
+mod1_diag <- gamm4(Disorganized ~ t1_tfinal + s(Age, k=4, bs='cr'), data=clin_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(Disorganized ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(Disorganized ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 ############## General ##############
-mod1_diag <- gamm4(General ~ t1_tfinal + s(Age, k=10, bs='cr'), data=clin_df,
+mod1_diag <- gamm4(General ~ t1_tfinal + s(Age, k=4, bs='cr'), data=clin_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(General ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(General ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 ############## GAF_Current ##############
-mod1_diag <- gamm4(GAF_Current ~ t1_tfinal + s(Age, k=10, bs='cr'), data=clin_df,
+mod1_diag <- gamm4(GAF_Current ~ t1_tfinal + s(Age, k=4, bs='cr'), data=clin_df,
   random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(GAF_Current ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
+mod2_diag <- gamm4(GAF_Current ~ t1_tfinal + s(Age, k=4, bs='cr') +
+  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 ############## GAF_Highest ##############
-mod1_diag <- gamm4(GAF_Highest ~ t1_tfinal + s(Age, k=10, bs='cr'), data=clin_df,
-  random=~(1|bblid), REML=TRUE)
-mod2_diag <- gamm4(GAF_Highest ~ t1_tfinal + s(Age, k=10, bs='cr') +
-  s(Age, by=oT1_Tfinal, k=10, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
+#mod1_diag <- gamm4(GAF_Highest ~ t1_tfinal + s(Age, k=4, bs='cr'), data=clin_df,
+#  random=~(1|bblid), REML=TRUE)
+#mod2_diag <- gamm4(GAF_Highest ~ t1_tfinal + s(Age, k=4, bs='cr') +
+#  s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=clin_df, random=~(1|bblid), REML=TRUE)
 
-all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
+#all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
 
 
