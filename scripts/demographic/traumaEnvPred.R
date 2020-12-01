@@ -10,9 +10,10 @@ library('reshape2')
 library('fastDummies')
 
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
-demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n1601_demographics_go1_20161212.csv')
+demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
 env_df <- read.csv('~/Documents/traumaInformant/data/n9498_go1_environment_factor_scores_tymoore_20150909.csv')
 trauma_df <- read.csv('~/Documents/traumaInformant/data/PNC_GO1_GOASSESSDataArchiveNontext_DATA_2015-07-14_1157.csv')
+diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202007.csv')
 
 trauma_df <- trauma_df[trauma_df$interview_type %in% c('AP', 'MP', 'YPI'),]
 trauma_df <- trauma_df[,c('proband_bblid', grep('ptd', names(trauma_df), value=TRUE))]
@@ -44,23 +45,30 @@ final_df$sex <- recode(final_df$sex, `2`='Female', `1`='Male')
 final_df$sex <- as.factor(final_df$sex)
 final_df <- within(final_df, sex <- relevel(sex, ref='Male'))
 
+# Calculate ages
+final_df <- merge(final_df, diag_df[diag_df$timepoint == 't1',])
+final_df$DODIAGNOSIS <- as.Date(final_df$DODIAGNOSIS, '%m/%d/%y')
+final_df$dob <- as.Date(final_df$dob, '%m/%d/%y')
+final_df$Age <- lubridate::time_length(difftime(final_df$DODIAGNOSIS, final_df$dob), 'years')
+
 ###############################################################################
 
+mod0 <- glm(PS_final ~ Age, family='binomial', data=final_df)
 
-mod1 <- glm(PS_final ~ first_diagnosis, family='binomial', data=final_df)
+mod1 <- glm(PS_final ~ Age + first_diagnosis, family='binomial', data=final_df)
 
-mod2 <- glm(PS_final ~ first_diagnosis + num_type_trauma, family='binomial', data=final_df)
+mod2 <- glm(PS_final ~ Age + first_diagnosis + num_type_trauma, family='binomial', data=final_df)
 
-mod3 <- glm(PS_final ~ first_diagnosis + num_type_trauma + envSES, family='binomial', data=final_df)
+mod3 <- glm(PS_final ~ Age + first_diagnosis + num_type_trauma + envSES, family='binomial', data=final_df)
 
-mod4 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envSES, family='binomial', data=final_df)
+mod4 <- glm(PS_final ~ Age + first_diagnosis + num_type_trauma*envSES, family='binomial', data=final_df)
 
-mod5 <- glm(PS_final ~ first_diagnosis + num_type_trauma*envSES + first_diagnosis*num_type_trauma + first_diagnosis*envSES, family='binomial', data=final_df)
+mod5 <- glm(PS_final ~ Age + first_diagnosis + num_type_trauma*envSES + first_diagnosis*num_type_trauma + first_diagnosis*envSES, family='binomial', data=final_df)
 
-mod6 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envSES, family='binomial', data=final_df)
+mod6 <- glm(PS_final ~ Age + first_diagnosis*num_type_trauma*envSES, family='binomial', data=final_df)
 
 
 
 #mod6 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envSES*sex, family='binomial', data=final_df) #Wildly overfit
 
-all_models_both <- tab_model(mod1, mod2, mod3, mod4, mod5, mod6)
+all_models_both <- tab_model(mod0, mod1, mod2, mod3, mod4, mod5, mod6)
