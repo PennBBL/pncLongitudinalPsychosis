@@ -8,16 +8,17 @@ library(dplyr) # Version 1.0.2
 library(ggplot2) # Version 3.3.2
 library(ggpubr)
 
-psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
-diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/n9498_goassess_psych_summary_vars_20131014.csv')
-demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
+psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv', stringsAsFactors = TRUE)
+diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/n9498_goassess_psych_summary_vars_20131014.csv', stringsAsFactors = TRUE)
+demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv', stringsAsFactors = TRUE)
 
 colsforplot <- grep('smry', names(diag_df), value=TRUE)
 colsforplot <- colsforplot[!(colsforplot %in% c('smry_prime_pos1', 'smry_prime_tot',
   'smry_prime_pos2', 'smry_psych_overall_rtg', grep('del', names(diag_df), value=TRUE),
   grep('hal', names(diag_df), value=TRUE)))]
 colsforplot <- gsub('smry_', '', colsforplot)
-
+colsforplot <- colsforplot[!(colsforplot %in% grep('_cat', colsforplot, value=TRUE))]
+colsforplot <- c(colsforplot, 'psy_cat')
 
 diag_df <- diag_df %>%
      mutate_at(grep('smry', names(diag_df), value=TRUE),
@@ -115,8 +116,8 @@ ann_text$x <- 'dep'
 ann_text$y <- 80
 
 final_sum_df$Feature <- gsub('_cat', '', final_sum_df$Feature)
-final_sum_df$Feature <- ordered(final_sum_df$Feature, c('ano', 'bul', 'eat', 'man',
-  'add', 'con', 'odd', 'dep', 'mood', 'anx', 'gad', 'ocd', 'pan', 'ptd', 'sep', 'soc',
+final_sum_df$Feature <- ordered(final_sum_df$Feature, c('ano', 'bul', 'man',
+  'add', 'con', 'odd', 'dep', 'gad', 'ocd', 'pan', 'ptd', 'sep', 'soc',
   'agr', 'phb', 'psy')) #Other, Externalizing, Depression, Anxiety, Phobia, Psychosis
 
 final_sum_df$Category <- ordered(final_sum_df$Category, c('Other', 'Externalizing',
