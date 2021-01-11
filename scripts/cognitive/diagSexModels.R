@@ -4,6 +4,7 @@
 ###
 ### Ellyn Butler
 ### September 8, 2020 - October 21, 2020 (new data October 20, 2020)
+### January 11, 2021 (add main effects for race for sensitivity analyses)
 
 # September 8, 2020: Bart says look into documentation on 'by' in mgcv to
 # understand why factor need to be ordered
@@ -19,12 +20,21 @@ library('lme4')
 library('gamm4')
 library('sjPlot')
 
-cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2020-10-20.csv')
+cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2020-10-20.csv', stringsAsFactors = TRUE)
+
+# Recode race
+cnb_df$race <- recode(cnb_df$race, `1`='White', `2`='Other', `3`='Other',
+  `4`='Other', `5`='Other')
 
 names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
 names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
 names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
 names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
+
+cnb_df$SocCog_EFF <- scale(cnb_df$SocCog_EFF)
+cnb_df$Exec_EFF <- scale(cnb_df$Exec_EFF)
+cnb_df$Mem_EFF <- scale(cnb_df$Mem_EFF)
+cnb_df$CompCog_EFF <- scale(cnb_df$CompCog_EFF)
 
 cnb_df$sex <- relevel(cnb_df$sex, 'Male')
 cnb_df$t1_tfinal <- relevel(cnb_df$t1_tfinal, 'TD_TD')
@@ -75,6 +85,13 @@ mod3_sex_diag <- gamm4(SocCog_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
 all_models_sex_diag <- tab_model(mod1_sex$gam, mod2_sex$gam, mod1_sex_diag$gam,
   mod2_sex_diag$gam, mod3_sex_diag$gam)
 
+#### Main Effects Demographics
+mod1_sex_race_diag <- gamm4(SocCog_EFF ~ sex + race + t1_tfinal +
+  s(Age, k=4, bs='cr') + s(Age, by=oT1_Tfinal, k=4, bs='cr'),
+  data=cnb_df, random=~(1|bblid), REML=TRUE)
+
+me_models <- tab_model(mod2_diag$gam, mod1_sex_race_diag$gam)
+
 
 ############## Executive Efficiency ##############
 #### Sex Models
@@ -96,6 +113,12 @@ mod3_sex_diag <- gamm4(Exec_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
+#### Main Effects Demographics
+mod1_sex_race_diag <- gamm4(Exec_EFF ~ sex + race + t1_tfinal +
+  s(Age, k=4, bs='cr') + s(Age, by=oT1_Tfinal, k=4, bs='cr'),
+  data=cnb_df, random=~(1|bblid), REML=TRUE)
+
+me_models <- tab_model(mod2_diag$gam, mod1_sex_race_diag$gam)
 
 ############## Memory Efficiency ##############
 #### Sex Models
@@ -116,6 +139,13 @@ mod3_sex_diag <- gamm4(Mem_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
   s(Age, by=oSex_oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
+
+#### Main Effects Demographics
+mod1_sex_race_diag <- gamm4(Mem_EFF ~ sex + race + t1_tfinal +
+  s(Age, k=4, bs='cr') + s(Age, by=oT1_Tfinal, k=4, bs='cr'),
+  data=cnb_df, random=~(1|bblid), REML=TRUE)
+
+me_models <- tab_model(mod2_diag$gam, mod1_sex_race_diag$gam)
 
 
 ############## Complex Cognition Efficiency ##############
@@ -138,7 +168,12 @@ mod3_sex_diag <- gamm4(CompCog_EFF ~ sex*t1_tfinal + s(Age, k=4, bs='cr') +
 
 all_models_diag <- tab_model(mod1_diag$gam, mod2_diag$gam)
 
+#### Main Effects Demographics
+mod1_sex_race_diag <- gamm4(CompCog_EFF ~ sex + race + t1_tfinal +
+  s(Age, k=4, bs='cr') + s(Age, by=oT1_Tfinal, k=4, bs='cr'),
+  data=cnb_df, random=~(1|bblid), REML=TRUE)
 
+me_models <- tab_model(mod2_diag$gam, mod1_sex_race_diag$gam)
 
 
 

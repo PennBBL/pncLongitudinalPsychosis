@@ -25,6 +25,11 @@ names(final_df)[names(final_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
 names(final_df)[names(final_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
 names(final_df)[names(final_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
 
+final_df$SocCog_EFF <- scale(final_df$SocCog_EFF)
+final_df$Exec_EFF <- scale(final_df$Exec_EFF)
+final_df$Mem_EFF <- scale(final_df$Mem_EFF)
+final_df$CompCog_EFF <- scale(final_df$CompCog_EFF)
+
 final_df$oT1_Tfinal <- ordered(final_df$t1_tfinal, c('TD_TD', 'OP_OP', 'OP_PS',
   'OP_TD', 'PS_OP', 'PS_PS', 'PS_TD', 'TD_OP', 'TD_PS'))
 
