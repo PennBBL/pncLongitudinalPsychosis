@@ -1,6 +1,5 @@
 ### This script runs GAMMs to see if there are main effects and interactions
-### for sex and longitudinal diagnostic labels for the social cognition factor
-### score.
+### for sex and longitudinal diagnostic labels for all of the seven WIV variables
 ###
 ### Ellyn Butler
 ### January 11, 2021 - January 12, 2021
@@ -22,6 +21,18 @@ cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quic
 # Recode race
 cnb_df$race <- recode(cnb_df$race, `1`='White', `2`='Other', `3`='Other',
   `4`='Other', `5`='Other')
+
+############## Name and scale factor scores
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
+
+cnb_df$SocCog_EFF <- scale(cnb_df$SocCog_EFF)
+cnb_df$Exec_EFF <- scale(cnb_df$Exec_EFF)
+cnb_df$Mem_EFF <- scale(cnb_df$Mem_EFF)
+cnb_df$CompCog_EFF <- scale(cnb_df$CompCog_EFF)
+
 
 ############## Create the WIV metrics
 cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)] <- sapply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)], scale)
@@ -72,24 +83,27 @@ getUpperLowerCI <- function(i) {
 
 ################################## GAMMs ##################################
 
+varis <- c(grep('WIV', names(cnb_df), value=TRUE), 'SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
 
-for (wiv in grep('WIV', names(cnb_df), value=TRUE)) {
-  names(cnb_df)[names(cnb_df) == wiv] <- 'WIV'
-  mod1 <- gamm4(WIV ~ t1_tfinal + s(Age, k=4, bs='cr') +
-    s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
-  mod2 <- gamm4(WIV ~ sex + race + t1_tfinal + s(Age, k=4, bs='cr') +
-    s(Age, by=oT1_Tfinal, k=4, bs='cr'), data=cnb_df, random=~(1|bblid), REML=TRUE)
-  print(tab_model(mod1$gam, mod2$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', wiv, '.html'))) #string.resp=wiv doesn't help
-  # Split by sex for plotting
-  for (sex in as.character(unique(cnb_df$sex))) {
-    final_df <- cnb_df[cnb_df$sex == sex,]
+for (vari in varis) {
+  mod1 <- gamm4(as.formula(paste(vari , "~ t1_tfinal + s(Age, k=4, bs='cr') +
+    s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
+  mod2 <- gamm4(as.formula(paste(vari , "~ sex + race + t1_tfinal + s(Age, k=4, bs='cr') +
+    s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
+  print(tab_model(mod1$gam, mod2$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '.html')))
+
+  ### Split by sex for plotting, and not
+  for (sex in c(as.character(unique(cnb_df$sex), 'both'))) {
+    if (sex == 'both') { final_df <- cnb_df } else { final_df <- cnb_df[cnb_df$sex == sex,] }
     row.names(final_df) <- 1:nrow(final_df)
     diags <- as.character(unique(final_df$t1_tfinal)[!(unique(final_df$t1_tfinal) %in% c('TD-TD', 'PS-PS'))])
 
     final_df$t1_tfinal_factor <- factor(final_df$t1_tfinal)
 
-    mod1b <- gamm4(WIV ~ t1_tfinal +  s(Age, k=4, bs='cr') + s(Age, by=oT1_Tfinal, k=4, bs='cr'),
-      data=final_df, random=~(1|bblid), REML=TRUE)
+    mod1b <- gamm4(as.formula(paste(vari , "~ t1_tfinal +  s(Age, k=4, bs='cr') + s
+      (Age, by=oT1_Tfinal, k=4, bs='cr')")), data=final_df, random=~(1|bblid), REML=TRUE)
+
+    print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '_', sex, '.html'))) # >>> Model Sex Split
 
     lp <- predict(mod1b$gam, newdata=final_df, type='lpmatrix')
     coefs <- coef(mod1b$gam)
@@ -105,16 +119,16 @@ for (wiv in grep('WIV', names(cnb_df), value=TRUE)) {
     final_df$predgamm <- predict(mod1b$gam)
 
     for (group in diags) {
-        subtit <- paste0('Sessions: TD-TD=', nrow(final_df[final_df$t1_tfinal == 'TD-TD' & final_df$sex == sex,]),
-          ', ', group, '=', nrow(final_df[final_df$t1_tfinal == group & final_df$sex == sex,]),
-          ', PS-PS=', nrow(final_df[final_df$t1_tfinal == 'PS-PS' & final_df$sex == sex,]))
+        subtit <- paste0('Sessions: TD-TD=', nrow(final_df[final_df$t1_tfinal == 'TD-TD',]),
+          ', ', group, '=', nrow(final_df[final_df$t1_tfinal == group,]),
+          ', PS-PS=', nrow(final_df[final_df$t1_tfinal == 'PS-PS',]))
         group_df <- final_df[final_df$t1_tfinal %in% c('TD-TD', group, 'PS-PS'), ]
         group_df$t1_tfinal <- ordered(group_df$t1_tfinal, c('TD-TD', group, 'PS-PS'))
-        cnb_plot <- ggplot(group_df, aes(x=Age, y=WIV, color=t1_tfinal)) + theme_linedraw() +
+        cnb_plot <- ggplot(group_df, aes_string(x='Age', y=vari, color='t1_tfinal')) + theme_linedraw() + #Plot Base and Sex Split
           scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
           theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
             plot.subtitle=element_text(size=8)) +
-          labs(title=paste0(wiv, ' (', sex, ')'), subtitle=subtit) +
+          labs(title=paste0(vari, ' (', sex, ')'), subtitle=subtit) +
           geom_line(aes(y=predgamm), size=1) +
           geom_line(data=final_df[final_df$t1_tfinal == 'TD-TD',], aes(y=LCI),
             size=.7, linetype=2, color='gray20') +
@@ -129,10 +143,9 @@ for (wiv in grep('WIV', names(cnb_df), value=TRUE)) {
           geom_line(data=final_df[final_df$t1_tfinal == 'PS-PS',], aes(y=UCI),
             size=.7, linetype=2, color='gray60')
 
-        pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_', wiv, '_', group, '_', sex, '.pdf'), width=4, height=4)
+        pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_', vari, '_', group, '_', sex, '.pdf'), width=4, height=4)
         print(cnb_plot)
         dev.off()
     }
   }
-  names(cnb_df)[names(cnb_df) == 'WIV'] <- wiv
 }
