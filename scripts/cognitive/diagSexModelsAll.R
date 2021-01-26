@@ -2,7 +2,7 @@
 ### for sex and longitudinal diagnostic labels for all of the seven WIV variables
 ###
 ### Ellyn Butler
-### January 11, 2021 - January 12, 2021
+### January 11, 2021 - January 26, 2021
 
 
 set.seed(20)
@@ -22,18 +22,6 @@ cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quic
 cnb_df$race <- recode(cnb_df$race, `1`='White', `2`='Other', `3`='Other',
   `4`='Other', `5`='Other')
 
-############## Name and scale factor scores
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
-
-cnb_df$SocCog_EFF <- scale(cnb_df$SocCog_EFF)
-cnb_df$Exec_EFF <- scale(cnb_df$Exec_EFF)
-cnb_df$Mem_EFF <- scale(cnb_df$Mem_EFF)
-cnb_df$CompCog_EFF <- scale(cnb_df$CompCog_EFF)
-
-
 ############## Create the WIV metrics
 cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)] <- sapply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)], scale)
 cnb_df$WIV_EFF <- scale(apply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)], 1, sd))
@@ -52,6 +40,17 @@ cnb_df$WIV_SocCog_EFF <- scale(apply(cnb_df[, c('ADT_EFF', 'ER40_EFF', 'MEDF_EFF
 # factor, because historically it has loaded on the Exec factor and we need at
 # least three tests to compute a SD
 
+############## Name and scale factor scores
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
+names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
+
+cnb_df$SocCog_EFF <- scale(cnb_df$SocCog_EFF)
+cnb_df$Exec_EFF <- scale(cnb_df$Exec_EFF)
+cnb_df$Mem_EFF <- scale(cnb_df$Mem_EFF)
+cnb_df$CompCog_EFF <- scale(cnb_df$CompCog_EFF)
+
 ############## Recoding variables
 cnb_df$sex <- relevel(cnb_df$sex, 'Male')
 cnb_df$t1_tfinal <- relevel(cnb_df$t1_tfinal, 'TD_TD')
@@ -66,11 +65,11 @@ cnb_df$oT1_Tfinal <- ordered(cnb_df$t1_tfinal, c('TD-TD', 'OP-OP', 'OP-PS',
   'OP-TD', 'PS-OP', 'PS-PS', 'PS-TD', 'TD-OP', 'TD-PS'))
 
 cnb_df$sex_t1_tfinal <- paste(cnb_df$sex, cnb_df$t1_tfinal, sep='_')
-cnb_df$oSex_oT1_Tfinal <- ordered(cnb_df$sex_t1_tfinal, c('Male_TD_TD',
-  'Male_OP_OP', 'Male_OP_PS', 'Male_OP_TD', 'Male_PS_OP', 'Male_PS_PS',
-  'Male_PS_TD', 'Male_TD_OP', 'Male_TD_PS', 'Female_TD_TD', 'Female_OP_OP',
-  'Female_OP_PS', 'Female_OP_TD', 'Female_PS_OP', 'Female_PS_PS', 'Female_PS_TD',
-  'Female_TD_OP', 'Female_TD_PS'))
+cnb_df$oSex_oT1_Tfinal <- ordered(cnb_df$sex_t1_tfinal, c('Male_TD-TD',
+  'Male_OP-OP', 'Male_OP-PS', 'Male_OP-TD', 'Male_PS-OP', 'Male_PS-PS',
+  'Male_PS-TD', 'Male_TD-OP', 'Male_TD-PS', 'Female_TD-TD', 'Female_OP-OP',
+  'Female_OP-PS', 'Female_OP-TD', 'Female_PS-OP', 'Female_PS-PS', 'Female_PS-TD',
+  'Female_TD-OP', 'Female_TD-PS'))
 
 ############## Defining functions
 getUpperLowerCI <- function(i) {
@@ -93,15 +92,15 @@ for (vari in varis) {
   print(tab_model(mod1$gam, mod2$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '.html')))
 
   ### Split by sex for plotting, and not
-  for (sex in c(as.character(unique(cnb_df$sex), 'both'))) {
+  for (sex in c(as.character(unique(cnb_df$sex)), 'both')) {
     if (sex == 'both') { final_df <- cnb_df } else { final_df <- cnb_df[cnb_df$sex == sex,] }
     row.names(final_df) <- 1:nrow(final_df)
     diags <- as.character(unique(final_df$t1_tfinal)[!(unique(final_df$t1_tfinal) %in% c('TD-TD', 'PS-PS'))])
 
     final_df$t1_tfinal_factor <- factor(final_df$t1_tfinal)
 
-    mod1b <- gamm4(as.formula(paste(vari , "~ t1_tfinal +  s(Age, k=4, bs='cr') + s
-      (Age, by=oT1_Tfinal, k=4, bs='cr')")), data=final_df, random=~(1|bblid), REML=TRUE)
+    mod1b <- gamm4(as.formula(paste(vari , "~ t1_tfinal +  s(Age, k=4, bs='cr') +
+      s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=final_df, random=~(1|bblid), REML=TRUE)
 
     print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '_', sex, '.html'))) # >>> Model Sex Split
 
