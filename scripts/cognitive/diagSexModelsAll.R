@@ -2,7 +2,7 @@
 ### for sex and longitudinal diagnostic labels for all of the seven WIV variables
 ###
 ### Ellyn Butler
-### January 11, 2021 - January 26, 2021
+### January 11, 2021 - January 27, 2021
 
 
 set.seed(20)
@@ -79,10 +79,18 @@ getUpperLowerCI <- function(i) {
   c(lower, upper)
 }
 
-
-################################## GAMMs ##################################
+################################## Titles ##################################
 
 varis <- c(grep('WIV', names(cnb_df), value=TRUE), 'SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
+
+title_df <- data.frame(Variable=varis, NewName=c('WIV Efficiency', 'WIV Accuracy',
+  'WIV Speed', 'WIV Executive Efficiency', 'WIV Memory Efficiency', 'WIV Complex Efficiency',
+  'WIV Social Efficiency', 'Social Efficiency', 'Executive Efficiency',
+  'Memory Efficiency', 'Complex Efficiency'), LB=c(rep(-1.5, 3), rep(-1.5, 4),
+  rep(-3, 4)), UB=c(rep(2, 11)))
+
+
+################################## GAMMs ##################################
 
 for (vari in varis) {
   mod1 <- gamm4(as.formula(paste(vari , "~ t1_tfinal + s(Age, k=4, bs='cr') +
@@ -90,6 +98,11 @@ for (vari in varis) {
   mod2 <- gamm4(as.formula(paste(vari , "~ sex + race + t1_tfinal + s(Age, k=4, bs='cr') +
     s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
   print(tab_model(mod1$gam, mod2$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '.html')))
+
+  # Get plot info
+  LBY <- title_df[title_df$Variable == vari, 'LB']
+  UBY <- title_df[title_df$Variable == vari, 'UB']
+  TIT <- title_df[title_df$Variable == vari, 'NewName']
 
   ### Split by sex for plotting, and not
   for (sex in c(as.character(unique(cnb_df$sex)), 'both')) {
@@ -127,7 +140,8 @@ for (vari in varis) {
           scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
           theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
             plot.subtitle=element_text(size=8)) +
-          labs(title=paste0(vari, ' (', sex, ')'), subtitle=subtit) +
+          ylim(LBY, UBY) + xlim(5, 30) +
+          labs(title=paste0(TIT, ' (', sex, ')'), subtitle=subtit, y='Score (95% CI)', color='Diagnoses') +
           geom_line(aes(y=predgamm), size=1) +
           geom_line(data=final_df[final_df$t1_tfinal == 'TD-TD',], aes(y=LCI),
             size=.7, linetype=2, color='gray20') +

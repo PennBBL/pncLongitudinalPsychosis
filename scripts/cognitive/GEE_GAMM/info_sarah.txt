@@ -1,0 +1,6 @@
+1. Fit a GAM with whatever variables you’re interested in/want to adjust for (ignoring within-subject correlation)
+2. Extract the model matrix from the GAM
+3. Use the columns in the GAM model matrix to fit a GEE, specifying subject ID and assuming exchangeable correlation structure
+4. Jointly test whether the coefficients of the smooth terms are 0
+
+The example I wrote wasn’t for repeated measures- I think it was just a case where there were multiple ways of quantifying something for each person so we wanted to account for within-subject correlation. Let me know if I can clarify anything!
