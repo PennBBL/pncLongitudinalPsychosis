@@ -140,7 +140,7 @@ for (vari in varis) {
           scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
           theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
             plot.subtitle=element_text(size=8)) +
-          ylim(LBY, UBY) + xlim(5, 30) +
+          ylim(LBY, UBY) + xlim(5, 30) + geom_hline(yintercept=0, size=1.5) + 
           labs(title=paste0(TIT, ' (', sex, ')'), subtitle=subtit, y='Score (95% CI)', color='Diagnoses') +
           geom_line(aes(y=predgamm), size=1) +
           geom_line(data=final_df[final_df$t1_tfinal == 'TD-TD',], aes(y=LCI),

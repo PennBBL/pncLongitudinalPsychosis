@@ -1,22 +1,32 @@
 ### This script makes table 1 for the clinical paper
 ###
 ### Ellyn Butler
-### November 30, 2020
+### November 30, 2020 - February 11, 2021
 
-library('dbplyr') # Version 1.1.4
-library('gtsummary') # Version 1.3.5
-library('dplyr') # Version 1.0.2
+library(gtsummary) # Version 1.3.5
+library(dbplyr) # Version 1.1.4
+library(dplyr) # Version 1.0.2
+library(reshape2) # Version 1.4.4
 
 demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
-clinical_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
-date_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202007.csv')
+#clinical_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
+date_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202012.csv')
 
+# Create first/last diagnoses df
+clinical_df <- date_df[date_df$timepoint == 't1' | date_df$timepoint == paste0('t', date_df$ntimepoints), ]
+clinical_df$timepoint <- recode(clinical_df$timepoint, 't1'='t1', 't2'='tfinal2',
+  't3'='tfinal2', 't4'='tfinal2', 't5'='tfinal2', 't6'='tfinal2')
+
+clinical_df <- reshape2::dcast(clinical_df, bblid ~ timepoint, value.var='diagnosis')
+clinical_df$t1_tfinal <- paste(clinical_df$t1, clinical_df$tfinal2, sep='_')
+
+# Merge dataframes
 date_df <- merge(date_df, demo_df, by='bblid')
 date_df$dob <- as.Date(date_df$dob, '%m/%d/%y')
 date_df$DODIAGNOSIS <- as.Date(date_df$DODIAGNOSIS, '%m/%d/%y')
 date_df$age <- (date_df$DODIAGNOSIS - date_df$dob)/365
 
-
+################################### Functions ###################################
 # Get age at first and last diagnosis
 ageFirstLast <- function(i) {
   bblid <- date_df[i, 'bblid']
@@ -26,6 +36,16 @@ ageFirstLast <- function(i) {
     c(age_first, age_last)
   } else { c(age_first, NA) }
 }
+
+getAssessmentNumber <- function(i, dataf) {
+  bblid <- dataf[i, 'bblid']
+  ages <- dataf[dataf$bblid == bblid, 'age']
+  ages <- sort(unique(ages))
+  which(ages == dataf[i, 'age'])
+}
+
+
+#################################################################################
 
 date_df[, c('First Age', 'Final Age')] <- t(sapply(1:nrow(date_df), ageFirstLast))
 
@@ -43,6 +63,57 @@ final_df$Diagnosis <- recode(final_df$t1_tfinal, 'other_TD'='OP-TD',
 final_df$Diagnosis <- ordered(final_df$Diagnosis, c('TD-TD', 'TD-OP', 'TD-PS',
   'OP-TD', 'OP-OP', 'OP-PS', 'PS-TD', 'PS-OP', 'PS-PS'))
 
+# Positive, Negative, Disorganized, General, GAF, social, role, trauma
+sipsgaf_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/clean_sips.csv')
+names(sipsgaf_df)[names(sipsgaf_df) == 'gaf_c'] <- 'GAF'
+sipsgaf_df$AssessmentNumber <- sapply(1:nrow(sipsgaf_df), getAssessmentNumber, dataf=sipsgaf_df)
+sipsgaf_df <- sipsgaf_df[sipsgaf_df$AssessmentNumber == 1, ] # Select for first time point
+
+dob_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
+corn_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/GOxCAPARepositoryAna_DATA_2017-06-23_1916_n705_Cornblatt.csv')
+corn_df <- merge(corn_df, dob_df, by='bblid')
+corn_df$dob <- as.Date(corn_df$dob, '%m/%d/%y')
+corn_df$datez <- as.Date(corn_df$datez, '%m/%d/%y')
+corn_df$age <- as.numeric(as.character((corn_df$datez - corn_df$dob)/365))
+corn_df$AssessmentNumber <- sapply(1:nrow(corn_df), getAssessmentNumber, dataf=corn_df)
+corn_df <- corn_df[corn_df$AssessmentNumber == 1,] # Select for first time point
+names(corn_df)[names(corn_df) == 'cornblatt_role_global_function_complete'] <- 'Role'
+names(corn_df)[names(corn_df) == 'cornblatt_social_global_function_complete'] <- 'Social'
+
+trauma_df <- read.csv('~/Documents/traumaInformant/data/PNC_GO1_GOASSESSDataArchiveNontext_DATA_2015-07-14_1157.csv')
+trauma_df <- trauma_df[trauma_df$interview_type %in% c('AP', 'MP', 'YPI'),]
+trauma_df <- trauma_df[,c('proband_bblid', grep('ptd', names(trauma_df), value=TRUE))]
+names(trauma_df)[names(trauma_df) == 'proband_bblid'] <- 'bblid'
+ptdvars <- c(paste0('ptd00', 1:4), paste0('ptd00', 6:9))
+trauma_df[, ptdvars] <- sapply(trauma_df[, ptdvars], na_if, y=9)
+trauma_df$Trauma <- rowSums(trauma_df[, ptdvars])
+
+
+first_df <- merge(final_df, sipsgaf_df, by='bblid', all.x=TRUE)
+# Problem bblids: first_df$bblid[duplicated(first_df$bblid)]: 85392  89279  93755 109735 116812
+# Two first assessments...
+
+
+
+first_df <- merge(first_df, corn_df, by='bblid', all.x=TRUE)
+first_df <- merge(first_df, trauma_df, by='bblid', all.x=TRUE)
+
+subsamps <- c('Positive', 'Negative', 'Disorganized', 'General', 'GAF', 'Social', 'Role', 'Trauma')
+for (subsamp in subsamps) {
+  tmp_df <- first_df[!is.na(first_df[, subsamp]), ]
+  summary_info <- tmp_df %>%
+    dplyr::select('Sex', 'Race', 'Diagnosis', 'First Age') %>%
+    tbl_summary(by = Diagnosis)
+  gtsave(summary_info, paste0('~/Documents/pncLongitudinalPsychosis/results/tableOne_', subsamp, '.html'))
+}
+
 summary_info <- final_df %>%
   dplyr::select('Sex', 'Race', 'Diagnosis', 'First Age', 'Final Age') %>%
   tbl_summary(by = Diagnosis)
+gtsave(summary_info, '~/Documents/pncLongitudinalPsychosis/results/tableOne_full.html')
+
+
+
+
+
+#

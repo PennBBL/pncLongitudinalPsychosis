@@ -2,15 +2,25 @@
 ### TIME POINT in each of the nine longitudinally defined clinical groups
 ###
 ### Ellyn Butler
-### November 3, 2020 - December 14, 2020
+### November 3, 2020 - February 11, 2021
 
 library(dplyr) # Version 1.0.2
 library(ggplot2) # Version 3.3.2
+library(reshape2) # Version 1.4.4
 
-psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv', stringsAsFactors = TRUE)
+psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202012.csv', stringsAsFactors = TRUE) # Changed to 202012 on February 11, 2021
 diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/n9498_goassess_psych_summary_vars_20131014.csv', stringsAsFactors = TRUE)
 demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv', stringsAsFactors = TRUE)
 
+# Put psstat_df in short format
+psstat_df <- psstat_df[psstat_df$timepoint == 't1' | psstat_df$timepoint == paste0('t', psstat_df$ntimepoints), ]
+psstat_df$timepoint <- recode(psstat_df$timepoint, 't1'='t1', 't2'='tfinal2',
+  't3'='tfinal2', 't4'='tfinal2', 't5'='tfinal2', 't6'='tfinal2')
+
+psstat_df <- reshape2::dcast(psstat_df, bblid ~ timepoint, value.var='diagnosis')
+psstat_df$t1_tfinal <- paste(psstat_df$t1, psstat_df$tfinal2, sep='_')
+
+# Get the column to put in the plot
 colsforplot <- grep('smry', names(diag_df), value=TRUE)
 colsforplot <- colsforplot[!(colsforplot %in% c('smry_prime_pos1', 'smry_prime_tot',
   'smry_prime_pos2', 'smry_psych_overall_rtg', grep('del', names(diag_df), value=TRUE),
@@ -40,6 +50,7 @@ final_df$first_diagnosis <- recode(final_df$first_diagnosis, 'other'='OP')
 final_df$last_diagnosis <- recode(final_df$last_diagnosis, 'other'='OP')
 final_df$t1_tfinal <- recode(final_df$t1_tfinal, 'other_other'='OP_OP',
   'other_TD'='OP_TD', 'other_PS'='OP_PS', 'TD_other'='TD_OP', 'PS_other'='PS_OP')
+final_df$t1_tfinal <- factor(final_df$t1_tfinal)
 final_df <- within(final_df, t1_tfinal <- relevel(t1_tfinal, ref='TD_TD'))
 
 
@@ -112,7 +123,7 @@ sex_labs <- paste0(ann_text[ann_text$Feature == 'Female', 'lab'], ', ',
 ann_text <- ann_text[1:9, names(ann_text) != 'Feature']
 ann_text$lab <- sex_labs
 
-ann_text$x <- 'dep'
+ann_text$x <- 'con'
 ann_text$y <- 80
 
 final_sum_df$Feature <- gsub('_cat', '', final_sum_df$Feature)
@@ -143,15 +154,17 @@ final_sum_df$Category <- ordered(final_sum_df$Category, c('Other', 'Externalizin
 #https://www.r-graph-gallery.com/267-reorder-a-variable-in-ggplot2.html
 
 ##### Plot
-comorbid_plot <- ggplot(final_sum_df, aes(x=Feature, y=Percent, fill=Category)) +
+comorbid_plot <- ggplot(final_sum_df[final_sum_df$first_diagnosis != 'TD - First Diagnosis',],
+    aes(x=Feature, y=Percent, fill=Category)) +
   theme_linedraw() + geom_bar(stat='identity') +
   facet_grid(first_diagnosis ~ last_diagnosis) +
   scale_fill_manual(values=c('black', 'purple', 'green3', 'gold', 'deepskyblue2', 'red')) +
   theme(axis.text.x=element_text(angle=45, hjust=1)) +
   coord_cartesian(ylim=c(0, 100)) +
-  labs(title='Comorbidities at First Visit') +
-  geom_text(data=ann_text, mapping=aes(x = x, y = y, label=lab), hjust=-.05, inherit.aes=FALSE)
+  #labs(title='Comorbidities at First Visit') +
+  geom_text(data=ann_text[ann_text$first_diagnosis != 'TD - First Diagnosis',],
+    mapping=aes(x = x, y = y, label=lab), hjust=-.05, inherit.aes=FALSE)
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/firstComorbid3x3.pdf', width=14, height=7)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/firstComorbid3x3.pdf', width=12, height=6)
 comorbid_plot
 dev.off()
