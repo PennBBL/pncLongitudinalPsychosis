@@ -1,7 +1,7 @@
 ### This script plots just the fits for the SIPS dimensions
 ###
 ### Ellyn Butler
-### August 27, 2020 - February 10, 2021
+### August 27, 2020 - February 17, 2021
 
 set.seed(20)
 
@@ -19,23 +19,13 @@ library('cowplot') # V 1.1.1
 library('pbkrtest') # V 0.5-0.1
 #library('gratia') # V 0.4.0
 
-clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/clean_sips.csv')
-diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
-diag_df$Diagnoses <- recode(diag_df$t1_tfinal, 'TD_TD'='TD-TD', 'TD_other'='TD-OP',
-  'TD_PS'='TD-PS', 'other_TD'='OP-TD', 'other_other'='OP-OP', 'other_PS'='OP-PS',
-  'PS_TD'='PS-TD', 'PS_other'='PS-OP', 'PS_PS'='PS-PS')
-
-final_df <- merge(clin_df, diag_df, by='bblid')
-
-final_df$Diagnoses <- factor(final_df$Diagnoses)
-final_df$Diagnoses <- relevel(final_df$Diagnoses, 'TD-TD')
-
-final_df$oDiagnoses <- ordered(final_df$Diagnoses, c('TD-TD', 'OP-OP', 'OP-PS',
-  'OP-TD', 'PS-OP', 'PS-PS', 'PS-TD', 'TD-OP', 'TD-PS'))
-
-names(final_df)[names(final_df) == 'gaf_c'] <- 'GAF'
-#names(final_df)[names(final_df) == 'gaf_h'] <- 'GAF_Highest'
-names(final_df)[names(final_df) == 'age'] <- 'Age'
+# Declare functions
+getAssessmentNumber <- function(i, dataf) {
+  bblid <- dataf[i, 'bblid']
+  ages <- dataf[dataf$bblid == bblid, 'age']
+  ages <- sort(unique(ages))
+  which(ages == dataf[i, 'age'])
+}
 
 getUpperLowerCI <- function(i) {
   sorted_vec <- unname(sort(fits[i,]))
@@ -44,14 +34,65 @@ getUpperLowerCI <- function(i) {
   c(lower, upper)
 }
 
-############################# Plot SIPS Dimensions #############################
+# Read in data
+clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/clean_sips_nodup.csv')
+diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n749_20210112.csv')
 
-plotcols <- c('Positive', 'Negative', 'Disorganized', 'General', 'GAF')
+# Recalculate ntimepoints (a lot of erroneous zeros)
+for (bblid in unique(diag_df$bblid)) {
+  diag_df[diag_df$bblid == bblid, 'ntimepoints'] <- length(diag_df[diag_df$bblid == bblid, 'ntimepoints'])
+}
 
-diags <- as.character(unique(final_df$Diagnoses)[!(unique(final_df$Diagnoses) %in% c('TD-TD', 'PS-PS'))])
+# Create first/last diagnoses df
+diag_df <- diag_df[diag_df$timepoint == 't1' | diag_df$timepoint == paste0('t', diag_df$ntimepoints), ]
+diag_df$timepoint <- recode(diag_df$timepoint, 't1'='t1', 't2'='tfinal2',
+  't3'='tfinal2', 't4'='tfinal2', 't5'='tfinal2', 't6'='tfinal2')
 
+diag_df$diagnosis <- recode(diag_df$diagnosis, 'psy'='PS')
+
+diag_df <- reshape2::dcast(diag_df, bblid ~ timepoint, value.var='diagnosis')
+diag_df$t1_tfinal <- paste(diag_df$t1, diag_df$tfinal2, sep='_')
+
+diag_df$Diagnoses <- recode(diag_df$t1_tfinal, 'TD_TD'='TD-TD', 'TD_other'='TD-OP',
+  'TD_PS'='TD-PS', 'other_TD'='OP-TD', 'other_other'='OP-OP', 'other_PS'='OP-PS',
+  'PS_TD'='PS-TD', 'PS_other'='PS-OP', 'PS_PS'='PS-PS')
+
+# Load and merge Cornblatt data
+dob_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
+corn_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/GOxCAPARepositoryAna_DATA_2017-06-23_1916_n705_Cornblatt.csv')
+corn_df <- merge(corn_df, dob_df, by='bblid')
+corn_df$dob <- as.Date(corn_df$dob, '%m/%d/%y')
+corn_df$datez <- as.Date(corn_df$datez, '%m/%d/%y')
+corn_df$age <- as.numeric(as.character((corn_df$datez - corn_df$dob)/365))
+names(corn_df)[names(corn_df) == 'cornblatt_gf_role'] <- 'Role'
+names(corn_df)[names(corn_df) == 'cornblatt_gf_social'] <- 'Social'
+
+# Name/relevel variables as necessary
+diag_df$Diagnoses <- factor(diag_df$Diagnoses)
+diag_df$Diagnoses <- relevel(diag_df$Diagnoses, 'TD-TD')
+
+diag_df$oDiagnoses <- ordered(diag_df$Diagnoses, c('TD-TD', 'OP-OP', 'OP-PS',
+  'OP-TD', 'PS-OP', 'PS-PS', 'PS-TD', 'TD-OP', 'TD-PS'))
+
+clin_df <- merge(clin_df, diag_df, by='bblid')
+corn_df <- merge(corn_df[, c('bblid', 'age', 'Social', 'Role')], diag_df, by='bblid')
+
+
+names(clin_df)[names(clin_df) == 'gaf_c'] <- 'Global'
+names(clin_df)[names(clin_df) == 'age'] <- 'Age'
+names(corn_df)[names(corn_df) == 'age'] <- 'Age'
+
+############################ Plot SIPS & functioning ############################
+
+plotcols <- c('Positive', 'Negative', 'Disorganized', 'General', 'Global', 'Social', 'Role')
+
+diags <- as.character(unique(clin_df$Diagnoses)[!(unique(clin_df$Diagnoses) %in% c('TD-TD', 'PS-PS'))])
+
+i=1
 for (score in plotcols) {
-  clin_score_df <- final_df
+  if (i < 6) { clin_score_df <- clin_df
+  } else { clin_score_df <- corn_df }
+
   clin_score_df <- clin_score_df[!is.na(clin_score_df[, score]), ]
   row.names(clin_score_df) <- 1:nrow(clin_score_df)
 
@@ -85,6 +126,7 @@ for (score in plotcols) {
     intervals_df <- reshape2::melt(group_df, c('bblid', 'Age', 'Diagnoses'), c('LCI', 'UCI'))
     clin_plot <- ggplot(group_df, aes_string(x='Age', y=score, color='Diagnoses')) +
       theme_linedraw() + xlim(10, 30) +
+      labs(title=score, subtitle=subtit, y='Score (95% CI)', color='Diagnoses') +
       scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
       theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
         plot.subtitle=element_text(size=8)) +
@@ -96,26 +138,22 @@ for (score in plotcols) {
       geom_ribbon(data=clin_score_df[clin_score_df$Diagnoses == 'PS-PS',],
         aes(ymin=LCI, ymax=UCI), alpha=.2, fill='red', show.legend=FALSE)
 
-      if (score == 'GAF') {
-        clin_plot <- clin_plot + labs(title='Global Assessment of Functioning', subtitle=subtit, y='Score (95% CI)', color='Diagnoses')
-      } else {
-        clin_plot <- clin_plot + labs(title=score, subtitle=subtit, y='Score (95% CI)', color='Diagnoses')
-      }
-
     assign(paste0(score, '_', gsub('-', '_', group), '_plot'), clin_plot)
 
     pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/clin_', score, '_', group, '_clean.pdf'), width=4, height=4)
     print(clin_plot)
     dev.off()
   }
+  i=i+1
 }
 
 # Add statistics to figures (or maybe not, just create a mega table)
-print(tab_model(Positive_model, Negative_model, Disorganized_model, General_model, GAF_model,
-  p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/clin_mega.html'))
+print(tab_model(Positive_model, Negative_model, Disorganized_model, General_model,
+  Global_model, Social_model, Role_model, p.adjust='fdr',
+  file='~/Documents/pncLongitudinalPsychosis/results/clin_mega.html'))
 
 
-# Build 2x2 with legend
+# Build 2x2 with legend (SIPS)
 diag_legend <- get_legend(Positive_OP_OP_plot)
 
 Positive_OP_OP_plot <- Positive_OP_OP_plot + theme(legend.position='none')
@@ -128,12 +166,23 @@ grid_plot <- cowplot::plot_grid(
   cowplot::plot_grid(Disorganized_OP_OP_plot, General_OP_OP_plot, labels=c('C', 'D')),
   diag_legend, rel_heights=c(4, 4, 1), nrow=3, ncol=1)
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/clin_grid_paper.pdf', width=7, height=8)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/sips_grid_paper.pdf', width=7, height=8)
 print(grid_plot)
 dev.off()
 
 
+# Build 1x3 with legend (functioning)
+Global_OP_OP_plot <- Global_OP_OP_plot + theme(legend.position='none')
+Social_OP_OP_plot <- Social_OP_OP_plot + theme(legend.position='none')
+Role_OP_OP_plot <- Role_OP_OP_plot + theme(legend.position='none')
 
+grid_plot <- cowplot::plot_grid(
+  cowplot::plot_grid(Global_OP_OP_plot, Social_OP_OP_plot, Role_OP_OP_plot,
+  labels=c('A', 'B', 'C'), ncol=3), diag_legend, rel_heights=c(4, 1), nrow=2, ncol=1)
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/func_grid_paper.pdf', width=10.5, height=4.444)
+print(grid_plot)
+dev.off()
 
 
 

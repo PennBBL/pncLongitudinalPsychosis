@@ -2,7 +2,7 @@
 ### for sex and longitudinal diagnostic labels for all of the seven WIV variables
 ###
 ### Ellyn Butler
-### January 11, 2021 - January 27, 2021
+### March 2, 2021
 
 
 set.seed(20)
@@ -16,14 +16,16 @@ library('gamm4')
 library('sjPlot')
 library('MASS')
 
-cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2020-10-20.csv', stringsAsFactors = TRUE)
+cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2021-03-02.csv', stringsAsFactors = TRUE)
 
 # Recode race
 cnb_df$race <- recode(cnb_df$race, `1`='White', `2`='Other', `3`='Other',
   `4`='Other', `5`='Other')
 
 ############## Create the WIV metrics
-cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)] <- sapply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)], scale)
+overall_eff <- c('SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
+
+cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)[!(grep('_EFF', names(cnb_df), value=TRUE) %in% overall_eff)]] <- sapply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)[!(grep('_EFF', names(cnb_df), value=TRUE) %in% overall_eff)]], scale)
 cnb_df$WIV_EFF <- scale(apply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)], 1, sd))
 
 cnb_df[, grep('_ACC', names(cnb_df), value=TRUE)] <- sapply(cnb_df[, grep('_ACC', names(cnb_df), value=TRUE)], scale)
@@ -40,12 +42,7 @@ cnb_df$WIV_SocCog_EFF <- scale(apply(cnb_df[, c('ADT_EFF', 'ER40_EFF', 'MEDF_EFF
 # factor, because historically it has loaded on the Exec factor and we need at
 # least three tests to compute a SD
 
-############## Name and scale factor scores
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
-names(cnb_df)[names(cnb_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
-
+############## Scale factor scores
 cnb_df$SocCog_EFF <- scale(cnb_df$SocCog_EFF)
 cnb_df$Exec_EFF <- scale(cnb_df$Exec_EFF)
 cnb_df$Mem_EFF <- scale(cnb_df$Mem_EFF)
@@ -63,6 +60,12 @@ cnb_df$t1_tfinal <- recode(cnb_df$t1_tfinal, 'TD_TD'='TD-TD', 'OP_OP'='OP-OP',
 
 cnb_df$oT1_Tfinal <- ordered(cnb_df$t1_tfinal, c('TD-TD', 'OP-OP', 'OP-PS',
   'OP-TD', 'PS-OP', 'PS-PS', 'PS-TD', 'TD-OP', 'TD-PS'))
+
+cnb_df$Diagnoses <- recode(cnb_df$t1_tfinal, 'TD-TD'='TD-TD', 'OP-OP'='OP-OP',
+  'OP-PS'='Decline', 'OP-TD'='Improve', 'PS-OP'='Improve', 'PS-PS'='PS-PS', 'PS-TD'='Improve',
+  'TD-OP'='Decline', 'TD-PS'='Decline')
+
+cnb_df$oDiagnoses <- ordered(cnb_df$Diagnoses, c('TD-TD', 'Improve', 'OP-OP', 'Decline', 'PS-PS'))
 
 cnb_df$sex_t1_tfinal <- paste(cnb_df$sex, cnb_df$t1_tfinal, sep='_')
 cnb_df$oSex_oT1_Tfinal <- ordered(cnb_df$sex_t1_tfinal, c('Male_TD-TD',
@@ -93,16 +96,17 @@ title_df <- data.frame(Variable=varis, NewName=c('WIV Efficiency', 'WIV Accuracy
 ################################## GAMMs ##################################
 
 for (vari in varis) {
-  mod1 <- gamm4(as.formula(paste(vari , "~ t1_tfinal + s(Age, k=4, bs='cr') +
-    s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
-  mod2 <- gamm4(as.formula(paste(vari , "~ sex + race + t1_tfinal + s(Age, k=4, bs='cr') +
-    s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
-  print(tab_model(mod1$gam, mod2$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '.html')))
+  #mod1 <- gamm4(as.formula(paste(vari , "~ Diagnoses + s(Age, k=4, bs='cr') +
+  #  s(Age, by=oDiagnoses, k=4, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
 
-  mod3 <- gamm4(as.formula(paste(vari , "~ sex*t1_tfinal +
-    s(Age, k=4, bs='cr') + s(Age, by=oSex_oT1_Tfinal, k=4, bs='cr')")),
-    data=cnb_df, random=~(1|bblid), REML=TRUE)
-  print(tab_model(mod3$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_interactions_', vari, '.html')))
+  #mod2 <- gamm4(as.formula(paste(vari , "~ sex + race + t1_tfinal + s(Age, k=4, bs='cr') +
+  #  s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=cnb_df, random=~(1|bblid), REML=TRUE)
+  #print(tab_model(mod1$gam, mod2$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '.html')))
+
+  #mod3 <- gamm4(as.formula(paste(vari , "~ sex*t1_tfinal +
+  #  s(Age, k=4, bs='cr') + s(Age, by=oSex_oT1_Tfinal, k=4, bs='cr')")),
+  #  data=cnb_df, random=~(1|bblid), REML=TRUE)
+  #print(tab_model(mod3$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_interactions_', vari, '.html')))
 
   # Get plot info
   LBY <- title_df[title_df$Variable == vari, 'LB']
@@ -110,17 +114,19 @@ for (vari in varis) {
   TIT <- title_df[title_df$Variable == vari, 'NewName']
 
   ### Split by sex for plotting, and not
-  for (sex in c(as.character(unique(cnb_df$sex)), 'both')) {
+  #for (sex in c(as.character(unique(cnb_df$sex)), 'both')) {
+  sex <- 'both'
     if (sex == 'both') { final_df <- cnb_df } else { final_df <- cnb_df[cnb_df$sex == sex,] }
     row.names(final_df) <- 1:nrow(final_df)
     diags <- as.character(unique(final_df$t1_tfinal)[!(unique(final_df$t1_tfinal) %in% c('TD-TD', 'PS-PS'))])
 
     final_df$t1_tfinal_factor <- factor(final_df$t1_tfinal)
 
-    mod1b <- gamm4(as.formula(paste(vari , "~ t1_tfinal +  s(Age, k=4, bs='cr') +
-      s(Age, by=oT1_Tfinal, k=4, bs='cr')")), data=final_df, random=~(1|bblid), REML=TRUE)
+    mod1b <- gamm4(as.formula(paste(vari , "~ Diagnoses +  s(Age, k=4, bs='cr') +
+      s(Age, by=oDiagnoses, k=4, bs='cr')")), data=final_df, random=~(1|bblid), REML=TRUE)
+    assign(paste0(vari, '_model'), mod1b)
 
-    print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', vari, '_', sex, '.html'))) # >>> Model Sex Split
+    print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_collapsed_', vari, '_', sex, '.html'))) # >>> Model Sex Split
 
     lp <- predict(mod1b$gam, newdata=final_df, type='lpmatrix')
     coefs <- coef(mod1b$gam)
@@ -135,35 +141,51 @@ for (vari in varis) {
     final_df <- cbind(final_df, cis)
     final_df$predgamm <- predict(mod1b$gam)
 
-    for (group in diags) {
-        subtit <- paste0('Sessions: TD-TD=', nrow(final_df[final_df$t1_tfinal == 'TD-TD',]),
-          ', ', group, '=', nrow(final_df[final_df$t1_tfinal == group,]),
-          ', PS-PS=', nrow(final_df[final_df$t1_tfinal == 'PS-PS',]))
-        group_df <- final_df[final_df$t1_tfinal %in% c('TD-TD', group, 'PS-PS'), ]
-        group_df$t1_tfinal <- ordered(group_df$t1_tfinal, c('TD-TD', group, 'PS-PS'))
-        cnb_plot <- ggplot(group_df, aes_string(x='Age', y=vari, color='t1_tfinal')) + theme_linedraw() + #Plot Base and Sex Split
-          scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
-          theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
-            plot.subtitle=element_text(size=8)) +
-          ylim(LBY, UBY) + xlim(5, 30) + geom_hline(yintercept=0, size=1.5) +
-          labs(title=paste0(TIT, ' (', sex, ')'), subtitle=subtit, y='Score (95% CI)', color='Diagnoses') +
-          geom_line(aes(y=predgamm), size=1) +
-          geom_line(data=final_df[final_df$t1_tfinal == 'TD-TD',], aes(y=LCI),
-            size=.7, linetype=2, color='gray20') +
-          geom_line(data=final_df[final_df$t1_tfinal == 'TD-TD',], aes(y=UCI),
-            size=.7, linetype=2, color='gray20') +
-          geom_line(data=final_df[final_df$t1_tfinal == group,], aes(y=LCI),
-            size=.7, linetype=2, color='gray40') +
-          geom_line(data=final_df[final_df$t1_tfinal == group,], aes(y=UCI),
-            size=.7, linetype=2, color='gray40') +
-          geom_line(data=final_df[final_df$t1_tfinal == 'PS-PS',], aes(y=LCI),
-            size=.7, linetype=2, color='gray60') +
-          geom_line(data=final_df[final_df$t1_tfinal == 'PS-PS',], aes(y=UCI),
-            size=.7, linetype=2, color='gray60')
 
-        pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_', vari, '_', group, '_', sex, '.pdf'), width=4, height=4)
-        print(cnb_plot)
-        dev.off()
-    }
-  }
+    subtit <- paste0('Sessions: TD-TD=', nrow(final_df[final_df$Diagnoses == 'TD-TD',]),
+          ', Improve=', nrow(final_df[final_df$Diagnoses == 'Improve',]),
+          ',\nOP-OP=', nrow(final_df[final_df$Diagnoses == 'OP-OP',]),
+          ', Decline=', nrow(final_df[final_df$Diagnoses == 'Decline',]),
+          ', PS-PS=', nrow(final_df[final_df$Diagnoses == 'PS-PS',]))
+
+    final_df$Diagnoses <- ordered(final_df$Diagnoses, c('TD-TD', 'Improve', 'OP-OP', 'Decline', 'PS-PS'))
+    cnb_plot <- ggplot(final_df, aes_string(x='Age', y=vari, color='Diagnoses')) + theme_linedraw() +
+          scale_color_manual(values=c('green4', 'green3', 'yellow2', 'darkorange', 'red2')) +
+          theme(plot.title=element_text(size=14, face="bold"), plot.subtitle=element_text(size=8)) +
+          ylim(LBY, UBY) + xlim(5, 30) + geom_hline(yintercept=0, size=1.5) +
+          labs(title=TIT, subtitle=subtit, y='Score (95% CI)', color='Diagnoses') +
+          geom_line(aes(y=predgamm), size=1) #title=paste0(TIT, ' (', sex, ')')
+
+      pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_collapsed_', vari, '_', sex, '.pdf'), width=6, height=4)
+      print(cnb_plot)
+      dev.off()
+
+      assign(paste0(vari, '_', sex, '_plot'), cnb_plot)
+    #}
+  #}
 }
+
+
+#'SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF'
+# Add statistics to figures (or maybe not, just create a mega table)
+print(tab_model(Exec_EFF_model$gam, Mem_EFF_model$gam, CompCog_EFF_model$gam, SocCog_EFF_model$gam,
+  p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/cog_mega.html'))
+
+
+# Build 2x2 with legend (SIPS)
+Exec_EFF_both_plot <- Exec_EFF_both_plot + theme(legend.position='bottom')
+diag_legend <- get_legend(Exec_EFF_both_plot)
+
+Exec_EFF_both_plot <- Exec_EFF_both_plot + theme(legend.position='none')
+Mem_EFF_both_plot <- Mem_EFF_both_plot + theme(legend.position='none')
+CompCog_EFF_both_plot <- CompCog_EFF_both_plot + theme(legend.position='none')
+SocCog_EFF_both_plot <- SocCog_EFF_both_plot + theme(legend.position='none')
+
+grid_plot <- cowplot::plot_grid(
+  cowplot::plot_grid(Exec_EFF_both_plot, Mem_EFF_both_plot, labels=c('A', 'B')),
+  cowplot::plot_grid(CompCog_EFF_both_plot, SocCog_EFF_both_plot, labels=c('C', 'D')),
+  diag_legend, rel_heights=c(4, 4, 1), nrow=3, ncol=1)
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cog_grid_paper.pdf', width=7, height=8.5)
+print(grid_plot)
+dev.off()

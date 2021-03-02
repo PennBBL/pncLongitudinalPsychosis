@@ -4,17 +4,39 @@
 ###
 ### Ellyn Butler
 ### August 11, 2020 - August 12, 2020 (Patch October 19, 2020)
+### Fixed labels on March 2, 2021
 
 set.seed(20)
 
-library('dplyr')
-library('reshape2')
-library('ggplot2')
-library('ggpubr')
-library('psych')
-library('missForest')
+library('dplyr') # Version 1.0.2
+library('reshape2') # Version 1.4.4
+library('ggplot2') # Version 3.3.2
+library('ggpubr') # Version 0.4.0
+library('psych') # Version 2.0.9
+library('missForest') # Version 1.4
+library('GPArotation') # Version 2014.11-1
 
-clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_202007.csv')
+clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n749_20210112.csv')
+
+# Recalculate ntimepoints (a lot of erroneous zeros)
+for (bblid in unique(clin_df$bblid)) {
+  clin_df[clin_df$bblid == bblid, 'ntimepoints'] <- length(clin_df[clin_df$bblid == bblid, 'ntimepoints'])
+}
+
+# Create first/last diagnoses df
+clin_df <- clin_df[clin_df$timepoint == 't1' | clin_df$timepoint == paste0('t', clin_df$ntimepoints), ]
+clin_df$timepoint <- recode(clin_df$timepoint, 't1'='t1', 't2'='tfinal2',
+  't3'='tfinal2', 't4'='tfinal2', 't5'='tfinal2', 't6'='tfinal2')
+
+clin_df$diagnosis <- recode(clin_df$diagnosis, 'psy'='PS')
+
+clin_df <- reshape2::dcast(clin_df, bblid ~ timepoint, value.var='diagnosis')
+clin_df$t1_tfinal <- paste(clin_df$t1, clin_df$tfinal2, sep='_')
+
+clin_df$Diagnoses <- recode(clin_df$t1_tfinal, 'TD_TD'='TD-TD', 'TD_other'='TD-OP',
+  'TD_PS'='TD-PS', 'other_TD'='OP-TD', 'other_other'='OP-OP', 'other_PS'='OP-PS',
+  'PS_TD'='PS-TD', 'PS_other'='PS-OP', 'PS_PS'='PS-PS')
+
 names(clin_df)[names(clin_df) == 't1'] <- 'first_diagnosis'
 names(clin_df)[names(clin_df) == 'tfinal2'] <- 'last_diagnosis'
 clin_df$first_diagnosis <- as.character(clin_df$first_diagnosis)
@@ -158,15 +180,24 @@ for (type in types) {
   assign(paste0(type, '_loadings_df'), loadings_df)
 }
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/eigenAccRtEff_impute_sex.pdf', width=12, height=4)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/eigenAccRtEff_impute.pdf', width=12, height=4)
 ggarrange(ACC_eigen_plot, RT_eigen_plot, EFF_eigen_plot, ncol=3)
 dev.off()
-
 
 loadings_df <- rbind(ACC_loadings_df, RT_loadings_df, EFF_loadings_df)
 loadings_df[, grep('MR', names(loadings_df), value=TRUE)] <- round(loadings_df[, grep('MR', names(loadings_df), value=TRUE)], digits=4)
 
 write.csv(loadings_df, paste0('~/Documents/pncLongitudinalPsychosis/results/factorLoadings_impute_', Sys.Date(),'.csv'), row.names=FALSE)
+
+# Select for only the columns you will be using in analysis
+names(tmp_df)[names(tmp_df) == 'EFF_Soln4_MR1'] <- 'SocCog_EFF'
+names(tmp_df)[names(tmp_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
+names(tmp_df)[names(tmp_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
+names(tmp_df)[names(tmp_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
+
+tmp_df <- tmp_df[, c('bblid', 'Age', 'race', 'sex', 'Timepoint', 'first_diagnosis', 'last_diagnosis',
+  't1_tfinal', grep('_ACC', names(tmp_df), value=TRUE), grep('_RT', names(tmp_df), value=TRUE),
+  grep('_EFF', names(tmp_df), value=TRUE))]
 
 write.csv(tmp_df, paste0('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_', Sys.Date(), '.csv'), row.names=FALSE)
 
