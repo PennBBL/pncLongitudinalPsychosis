@@ -1,7 +1,7 @@
 ### This script plots just the fits for the SIPS dimensions
 ###
 ### Ellyn Butler
-### August 27, 2020 - February 17, 2021
+### August 27, 2020 - March 4, 2021
 
 set.seed(20)
 
@@ -66,8 +66,11 @@ diag_df$oDiagnoses <- ordered(diag_df$Diagnoses, c('TD-TD', 'OP-OP', 'OP-PS',
 
 clin_df <- merge(clin_df, diag_df, by='bblid')
 
+clin_df$White <- recode(clin_df$race, `1`='Yes', `2`='No', `3`='No', `4`='No', `5`='No')
+
 names(clin_df)[names(clin_df) == 'gaf_c'] <- 'Global'
 names(clin_df)[names(clin_df) == 'age'] <- 'Age'
+names(clin_df)[names(clin_df) == 'sex'] <- 'Sex'
 
 ############################ Plot SIPS & functioning ############################
 
@@ -84,8 +87,13 @@ for (score in plotcols) {
   mod1b <- gamm4(as.formula(paste(score, "~ Diagnoses + s(Age, k=4, bs='cr') +
     s(Age, by=oDiagnoses, k=10, bs='cr')")), data=clin_score_df, random=~(1|bblid), REML=TRUE)
 
+  mod2b <- gamm4(as.formula(paste(score, "~ Sex + White + Diagnoses + s(Age, k=4, bs='cr') +
+    s(Age, by=oDiagnoses, k=10, bs='cr')")), data=clin_score_df, random=~(1|bblid), REML=TRUE)
+
   print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/table_', score, '.html')))
   assign(paste0(score, '_model'), mod1b$gam)
+  print(tab_model(mod2b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/tableSensitivity_', score, '.html')))
+  assign(paste0(score, 'Sensitivity_model'), mod2b$gam)
 
   lp <- predict(mod1b$gam, newdata=clin_score_df, type='lpmatrix')
   coefs <- coef(mod1b$gam)
@@ -135,7 +143,9 @@ for (score in plotcols) {
 # Add statistics to figures (or maybe not, just create a mega table)
 print(tab_model(Positive_model, Negative_model, Disorganized_model, General_model,
   Global_model, p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/clin_mega.html'))
-
+print(tab_model(PositiveSensitivity_model, NegativeSensitivity_model,
+  DisorganizedSensitivity_model, GeneralSensitivity_model, GlobalSensitivity_model,
+  p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/clinSensitivity_mega.html'))
 
 # Build 2x2 with legend (SIPS)
 diag_legend <- get_legend(Positive_OP_OP_plot)

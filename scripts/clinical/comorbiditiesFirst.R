@@ -2,17 +2,22 @@
 ### TIME POINT in each of the nine longitudinally defined clinical groups
 ###
 ### Ellyn Butler
-### November 3, 2020 - February 11, 2021
+### November 3, 2020 - March 4, 2021
 
 library(dplyr) # Version 1.0.2
 library(ggplot2) # Version 3.3.2
 library(reshape2) # Version 1.4.4
 
-psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n752_longwdates_202012.csv', stringsAsFactors = TRUE) # Changed to 202012 on February 11, 2021
+psstat_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n749_20210112.csv', stringsAsFactors = TRUE) # Changed to 20210112 on March 4, 2021
 diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/n9498_goassess_psych_summary_vars_20131014.csv', stringsAsFactors = TRUE)
 demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv', stringsAsFactors = TRUE)
 
+
+
 # Put psstat_df in short format
+for (bblid in unique(psstat_df$bblid)) {
+  psstat_df[psstat_df$bblid == bblid, 'ntimepoints'] <- length(psstat_df[psstat_df$bblid == bblid, 'ntimepoints'])
+}
 psstat_df <- psstat_df[psstat_df$timepoint == 't1' | psstat_df$timepoint == paste0('t', psstat_df$ntimepoints), ]
 psstat_df$timepoint <- recode(psstat_df$timepoint, 't1'='t1', 't2'='tfinal2',
   't3'='tfinal2', 't4'='tfinal2', 't5'='tfinal2', 't6'='tfinal2')
