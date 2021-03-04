@@ -2,7 +2,7 @@
 ### and sums each of the SIPS domains
 ###
 ### Ellyn Butler
-### October 5, 2020 (February 12, 2021: fix two assesor problem)
+### October 5, 2020 (February 12, 2021: fix two assessor problem)
 
 library('dplyr')
 library('lubridate')

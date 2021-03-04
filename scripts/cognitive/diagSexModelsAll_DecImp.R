@@ -142,7 +142,7 @@ for (vari in varis) {
     final_df$predgamm <- predict(mod1b$gam)
 
 
-    subtit <- paste0('Sessions: TD-TD=', nrow(final_df[final_df$Diagnoses == 'TD-TD',]),
+    subtit <- paste0('Sessions: TD-TD=', nrow(final_df[final_df$Diagnoses == 'TD-TD' & ufinal_df$bblid,]),
           ', Improve=', nrow(final_df[final_df$Diagnoses == 'Improve',]),
           ',\nOP-OP=', nrow(final_df[final_df$Diagnoses == 'OP-OP',]),
           ', Decline=', nrow(final_df[final_df$Diagnoses == 'Decline',]),
@@ -153,7 +153,7 @@ for (vari in varis) {
           scale_color_manual(values=c('green4', 'green3', 'yellow2', 'darkorange', 'red2')) +
           theme(plot.title=element_text(size=14, face="bold"), plot.subtitle=element_text(size=8)) +
           ylim(LBY, UBY) + xlim(5, 30) + geom_hline(yintercept=0, size=1.5) +
-          labs(title=TIT, subtitle=subtit, y='Score (95% CI)', color='Diagnoses') +
+          labs(title=TIT, subtitle=subtit, y='Score', color='Diagnoses') + # (95% CI)
           geom_line(aes(y=predgamm), size=1) #title=paste0(TIT, ' (', sex, ')')
 
       pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_collapsed_', vari, '_', sex, '.pdf'), width=6, height=4)
@@ -186,6 +186,6 @@ grid_plot <- cowplot::plot_grid(
   cowplot::plot_grid(CompCog_EFF_both_plot, SocCog_EFF_both_plot, labels=c('C', 'D')),
   diag_legend, rel_heights=c(4, 4, 1), nrow=3, ncol=1)
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cog_grid_paper.pdf', width=7, height=8.5)
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cog_grid_paper.pdf', width=7, height=7.5)
 print(grid_plot)
 dev.off()

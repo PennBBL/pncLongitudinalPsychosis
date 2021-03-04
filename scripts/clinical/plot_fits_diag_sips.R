@@ -57,16 +57,6 @@ diag_df$Diagnoses <- recode(diag_df$t1_tfinal, 'TD_TD'='TD-TD', 'TD_other'='TD-O
   'TD_PS'='TD-PS', 'other_TD'='OP-TD', 'other_other'='OP-OP', 'other_PS'='OP-PS',
   'PS_TD'='PS-TD', 'PS_other'='PS-OP', 'PS_PS'='PS-PS')
 
-# Load and merge Cornblatt data
-dob_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
-corn_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/GOxCAPARepositoryAna_DATA_2017-06-23_1916_n705_Cornblatt.csv')
-corn_df <- merge(corn_df, dob_df, by='bblid')
-corn_df$dob <- as.Date(corn_df$dob, '%m/%d/%y')
-corn_df$datez <- as.Date(corn_df$datez, '%m/%d/%y')
-corn_df$age <- as.numeric(as.character((corn_df$datez - corn_df$dob)/365))
-names(corn_df)[names(corn_df) == 'cornblatt_gf_role'] <- 'Role'
-names(corn_df)[names(corn_df) == 'cornblatt_gf_social'] <- 'Social'
-
 # Name/relevel variables as necessary
 diag_df$Diagnoses <- factor(diag_df$Diagnoses)
 diag_df$Diagnoses <- relevel(diag_df$Diagnoses, 'TD-TD')
@@ -75,24 +65,19 @@ diag_df$oDiagnoses <- ordered(diag_df$Diagnoses, c('TD-TD', 'OP-OP', 'OP-PS',
   'OP-TD', 'PS-OP', 'PS-PS', 'PS-TD', 'TD-OP', 'TD-PS'))
 
 clin_df <- merge(clin_df, diag_df, by='bblid')
-corn_df <- merge(corn_df[, c('bblid', 'age', 'Social', 'Role')], diag_df, by='bblid')
-
 
 names(clin_df)[names(clin_df) == 'gaf_c'] <- 'Global'
 names(clin_df)[names(clin_df) == 'age'] <- 'Age'
-names(corn_df)[names(corn_df) == 'age'] <- 'Age'
 
 ############################ Plot SIPS & functioning ############################
 
-plotcols <- c('Positive', 'Negative', 'Disorganized', 'General', 'Global', 'Social', 'Role')
+plotcols <- c('Positive', 'Negative', 'Disorganized', 'General', 'Global') #, 'Social', 'Role')
 
 diags <- as.character(unique(clin_df$Diagnoses)[!(unique(clin_df$Diagnoses) %in% c('TD-TD', 'PS-PS'))])
 
 i=1
 for (score in plotcols) {
-  if (i < 6) { clin_score_df <- clin_df
-  } else { clin_score_df <- corn_df }
-
+  clin_score_df <- clin_df
   clin_score_df <- clin_score_df[!is.na(clin_score_df[, score]), ]
   row.names(clin_score_df) <- 1:nrow(clin_score_df)
 
@@ -149,8 +134,7 @@ for (score in plotcols) {
 
 # Add statistics to figures (or maybe not, just create a mega table)
 print(tab_model(Positive_model, Negative_model, Disorganized_model, General_model,
-  Global_model, Social_model, Role_model, p.adjust='fdr',
-  file='~/Documents/pncLongitudinalPsychosis/results/clin_mega.html'))
+  Global_model, p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/clin_mega.html'))
 
 
 # Build 2x2 with legend (SIPS)
@@ -171,18 +155,19 @@ print(grid_plot)
 dev.off()
 
 
-# Build 1x3 with legend (functioning)
-Global_OP_OP_plot <- Global_OP_OP_plot + theme(legend.position='none')
-Social_OP_OP_plot <- Social_OP_OP_plot + theme(legend.position='none')
-Role_OP_OP_plot <- Role_OP_OP_plot + theme(legend.position='none')
 
-grid_plot <- cowplot::plot_grid(
-  cowplot::plot_grid(Global_OP_OP_plot, Social_OP_OP_plot, Role_OP_OP_plot,
-  labels=c('A', 'B', 'C'), ncol=3), diag_legend, rel_heights=c(4, 1), nrow=2, ncol=1)
+# Build 1x3 with legend (functioning) - NOT ENOUGH CORNBLATT DATA
+#Global_OP_OP_plot <- Global_OP_OP_plot + theme(legend.position='none')
+#Social_OP_OP_plot <- Social_OP_OP_plot + theme(legend.position='none')
+#Role_OP_OP_plot <- Role_OP_OP_plot + theme(legend.position='none')
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/func_grid_paper.pdf', width=10.5, height=4.444)
-print(grid_plot)
-dev.off()
+#grid_plot <- cowplot::plot_grid(
+#  cowplot::plot_grid(Global_OP_OP_plot, Social_OP_OP_plot, Role_OP_OP_plot,
+#  labels=c('A', 'B', 'C'), ncol=3), diag_legend, rel_heights=c(4, 1), nrow=2, ncol=1)
+
+#pdf(file='~/Documents/pncLongitudinalPsychosis/plots/func_grid_paper.pdf', width=10.5, height=4.444)
+#print(grid_plot)
+#dev.off()
 
 
 

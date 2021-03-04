@@ -1,7 +1,7 @@
 ### This script makes table 1 for the clinical paper
 ###
 ### Ellyn Butler
-### November 30, 2020 - February 11, 2021
+### November 30, 2020 - March 3, 2021
 
 library(gtsummary) # Version 1.3.5
 library(dbplyr) # Version 1.1.4
@@ -77,10 +77,25 @@ names(sipsgaf_df)[names(sipsgaf_df) == 'gaf_c'] <- 'GAF'
 sipsgaf_df$AssessmentNumber <- sapply(1:nrow(sipsgaf_df), getAssessmentNumber, dataf=sipsgaf_df)
 sipsgaf_df <- sipsgaf_df[sipsgaf_df$AssessmentNumber == 1, ] # Select for first time point
 
+# Cornblatt
 dob_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demo_sex_race_ethnicity_dob.csv')
-corn_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/Cornblatt_data_all_20210223.csv')
+corn_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/Cornblatt_data_all_withconsensus_20210226.csv')
+#corn_df[!is.na(corn_df$cornblatt_gf_role), c('bblid', 'interview_type', 'date', 'cornblatt_gf_role', 'cornblatt_final_gf_role_mth')]
+
+# Filter to include only probands in the PNC
 corn_df <- corn_df[corn_df$interview_type %in% c('FP', 'IP', 'YPI'), ]
 corn_df <- merge(corn_df, dob_df, by='bblid')
+
+# If there are still NAs in cornblatt_gf_role/cornblatt_gf_social, replace those with the value from cornblatt_final_gf_role_mth/cornblatt_final_gf_social_mth
+for (i in 1:nrow(corn_df)) {
+  if (is.na(corn_df[i, 'cornblatt_gf_role']) & !is.na(corn_df[i, 'cornblatt_final_gf_role_mth'])) {
+    corn_df[i, 'cornblatt_gf_role'] <- corn_df[i, 'cornblatt_final_gf_role_mth']
+  }
+  if (is.na(corn_df[i, 'cornblatt_gf_social']) & !is.na(corn_df[i, 'cornblatt_final_gf_social_mth'])) {
+    corn_df[i, 'cornblatt_gf_social'] <- corn_df[i, 'cornblatt_final_gf_social_mth']
+  }
+}
+
 corn_df$dob <- as.Date(corn_df$dob, '%m/%d/%y')
 corn_df$date <- as.Date(corn_df$date, '%m/%d/%y')
 corn_df$age <- as.numeric(as.character((corn_df$date - corn_df$dob)/365))
