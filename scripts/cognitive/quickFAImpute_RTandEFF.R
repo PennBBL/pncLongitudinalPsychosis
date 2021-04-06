@@ -5,7 +5,7 @@
 ### Ellyn Butler
 ### August 11, 2020 - August 12, 2020 (Patch October 19, 2020)
 ### Fixed labels on March 2, 2021
-### Added labels for Accuracy and Speed on April 6, 2021
+### Added labels for Accuracy and Speed on March 22, 2021
 
 set.seed(20)
 
@@ -124,74 +124,30 @@ tmp_df[, paste0(tests_acc, '_EFF')] <- sapply(tests_acc, calcEfficiency)
 tmp_df[, paste0(tests_acc, '_EFF')] <- sapply(tmp_df[, paste0(tests_acc, '_EFF')], scale)
 
 # Get factor scores and save loadings
-types <- c('ACC', 'RT', 'EFF')
-numfactors <- 1:4
-tests_eff <- tests_acc
+tests <- c(grep('EFF', names(tmp_df), value=TRUE), 'TAP_RT', 'MPRAXIS_RT')
+numfs <- 5
+fanal <- fa(tmp_df[, tests], nfactors=numfs, rotate='oblimin')
 
-faargs <- 1:6
-for (faarg in 1) { #faargs
-  for (type in types) {
-    tests <- get(paste0('tests_', tolower(type)))
-    cnb_eigenvalues <- eigen(cor(tmp_df[, paste0(tests, '_', type)]))$values
-    eigen_df <- data.frame(matrix(NA, nrow=length(cnb_eigenvalues), ncol=2))
-    names(eigen_df) <- c("compnum", "eigen")
-    eigen_df$compnum <- 1:length(tests)
-    eigen_df$eigen <- cnb_eigenvalues
+loadings_df <- unclass(fanal$loadings)
+colnames(loadings_df) <- paste0('Soln', numfs, '_', colnames(loadings_df))
+tmp_df[, paste0('EFFRT_Soln', numfs, '_MR', 1:numfs)] <- fanal$scores
 
-    eigen_plot <- ggplot(eigen_df, aes(x=compnum, y=eigen)) +
-      geom_line(stat="identity") + geom_point() +  theme_minimal() +
-      xlab("Component Number") + ylab("Eigenvalues of Components") +
-      scale_y_continuous(limits=c(0, 6)) + ggtitle(paste0(type,': Scree Plot')) +
-      theme(plot.title = element_text(size=12), axis.title = element_text(size=10),
-        axis.text = element_text(size=6))
-    assign(paste0(type, '_eigen_plot'), eigen_plot)
+loadings_df <- loadings_df[, sort(colnames(loadings_df))]
+loadings_df <- as.data.frame(loadings_df)
 
-    for (numfs in numfactors) {
-      if (faarg == 1) { fanal <- fa(tmp_df[, paste0(tests, '_', type)], nfactors=numfs, rotate='oblimin')
-      } else if (faarg == 2) { fanal <- fa(tmp_df[, paste0(tests, '_', type)], nfactors=numfs, rotate='promax')
-      } else if (faarg == 3) { fanal <- fa(tmp_df[, paste0(tests, '_', type)], nfactors=numfs, rotate='oblimin', fm='pa')
-      } else if (faarg == 4) { fanal <- fa(tmp_df[, paste0(tests, '_', type)], nfactors=numfs, rotate='promax', fm='pa')
-      } else if (faarg == 5) { fanal <- fa(tmp_df[, paste0(tests, '_', type)], nfactors=numfs, rotate='geominQ', fm='ml')
-      } else if (faarg == 6) { fanal <- fa(tmp_df[, paste0(tests, '_', type)], nfactors=numfs, rotate='promax', fm='ml')
-      }
-      if (numfs == 1) {
-        loadings_df <- unclass(fanal$loadings)
-        colnames(loadings_df) <- paste0('Soln', numfs, '_', colnames(loadings_df))
-      } else {
-        loadings_tmp_df <- unclass(fanal$loadings)
-        colnames(loadings_tmp_df) <- paste0('Soln', numfs, '_', colnames(loadings_tmp_df))
-        loadings_df <- cbind(loadings_df, loadings_tmp_df)
-      }
-      #factor_info <- factor.scores(tmp_df[, paste0(tests, '_', type)], fanal)
-      tmp_df[, paste0(type, '_Soln', numfs, '_MR', 1:numfs)] <- fanal$scores
-    }
-    loadings_df <- loadings_df[, sort(colnames(loadings_df))]
-    loadings_df <- as.data.frame(loadings_df)
-    # Sort rows
-    if (nrow(loadings_df) == 12) {
-      loadings_df$desiredOrder <- c(10, 7, 4, 8, 11, 12, 5, 6, 1, 2, 3, 9)
-      loadings_df <- loadings_df[order(loadings_df$desiredOrder), ]
-      loadings_df$Domain <- c(rep('ComCog', 3), rep('Exec', 3), rep('Mem', 3), rep('SocCog', 3))
-    } else {
-      loadings_df$desiredOrder <- c(10, 7, 4, 8, 11, 12, 5, 6, 1, 2, 3, 9, 13, 14)
-      loadings_df <- loadings_df[order(loadings_df$desiredOrder), ]
-      loadings_df$Domain <- c(rep('ComCog', 3), rep('Exec', 3), rep('Mem', 3), rep('SocCog', 3), rep('SMSpeed', 2))
-    }
-    loadings_df <- loadings_df[, names(loadings_df) != 'desiredOrder']
-    loadings_df$Test <- row.names(loadings_df)
-    loadings_df <- loadings_df[, c(11, 12, 1:10)]
-    assign(paste0(type, '_loadings_df'), loadings_df)
-  }
-  pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/eigenAccRtEff_args', faarg, '_impute.pdf'), width=12, height=4)
-  ggarrange(ACC_eigen_plot, RT_eigen_plot, EFF_eigen_plot, ncol=3)
-  dev.off()
+# Sort rows
+loadings_df$desiredOrder <- c(10, 7, 4, 8, 11, 12, 5, 6, 1, 2, 3, 9, 13, 14)
+loadings_df <- loadings_df[order(loadings_df$desiredOrder), ]
+loadings_df$Domain <- c(rep('ComCog', 3), rep('Exec', 3), rep('Mem', 3), rep('SocCog', 3), rep('SMSpeed', 2))
 
-  loadings_df <- rbind(ACC_loadings_df, RT_loadings_df, EFF_loadings_df)
-  loadings_df[, grep('MR', names(loadings_df), value=TRUE)] <- round(loadings_df[, grep('MR', names(loadings_df), value=TRUE)], digits=4)
+loadings_df <- loadings_df[, names(loadings_df) != 'desiredOrder']
+loadings_df$Test <- row.names(loadings_df)
+loadings_df <- loadings_df[, c(6, 7, 1:5)]
 
-  assign(paste0('faarg', faarg, '_loadings_df'), loadings_df)
-  write.csv(loadings_df, paste0('~/Documents/pncLongitudinalPsychosis/results/factorLoadings_impute_args', faarg, '_', Sys.Date(),'.csv'), row.names=FALSE)
-}
+loadings_df[, grep('MR', names(loadings_df), value=TRUE)] <- round(loadings_df[, grep('MR', names(loadings_df), value=TRUE)], digits=4)
+
+write.csv(loadings_df, paste0('~/Documents/pncLongitudinalPsychosis/results/factorLoadings_impute_effrt_', Sys.Date(),'.csv'), row.names=FALSE)
+
 
 
 # Select for only the columns you will be using in analysis
@@ -200,9 +156,6 @@ names(tmp_df)[names(tmp_df) == 'EFF_Soln4_MR2'] <- 'Exec_EFF'
 names(tmp_df)[names(tmp_df) == 'EFF_Soln4_MR3'] <- 'Mem_EFF'
 names(tmp_df)[names(tmp_df) == 'EFF_Soln4_MR4'] <- 'CompCog_EFF'
 
-names(tmp_df)[names(tmp_df) == 'ACC_Soln3_MR1'] <- 'CompCog_ACC'
-names(tmp_df)[names(tmp_df) == 'ACC_Soln3_MR2'] <- 'SocCog_ACC'
-names(tmp_df)[names(tmp_df) == 'ACC_Soln3_MR3'] <- 'Mem_ACC'
 
 tmp_df <- tmp_df[, c('bblid', 'Age', 'race', 'sex', 'Timepoint', 'first_diagnosis', 'last_diagnosis',
   't1_tfinal', grep('_ACC', names(tmp_df), value=TRUE), grep('_RT', names(tmp_df), value=TRUE),

@@ -2,7 +2,7 @@
 ### for sex and longitudinal diagnostic labels for all of the seven WIV variables
 ###
 ### Ellyn Butler
-### March 2, 2021
+### March 2, 2021 - April 6, 2021
 
 
 set.seed(20)
@@ -16,7 +16,8 @@ library('gamm4')
 library('sjPlot')
 library('MASS')
 
-cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2021-03-02.csv', stringsAsFactors = TRUE)
+cnb_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2021-04-06.csv', stringsAsFactors = TRUE)
+#cnb_quickFA_impute_2021-03-02.csv
 
 # Recode race
 cnb_df$race <- recode(cnb_df$race, `1`='White', `2`='Other', `3`='Other',
@@ -24,11 +25,12 @@ cnb_df$race <- recode(cnb_df$race, `1`='White', `2`='Other', `3`='Other',
 
 ############## Create the WIV metrics
 overall_eff <- c('SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
+overall_acc <- c('SocCog_ACC', 'Mem_ACC', 'CompCog_ACC')
 
 cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)[!(grep('_EFF', names(cnb_df), value=TRUE) %in% overall_eff)]] <- sapply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)[!(grep('_EFF', names(cnb_df), value=TRUE) %in% overall_eff)]], scale)
 cnb_df$WIV_EFF <- scale(apply(cnb_df[, grep('_EFF', names(cnb_df), value=TRUE)], 1, sd))
 
-cnb_df[, grep('_ACC', names(cnb_df), value=TRUE)] <- sapply(cnb_df[, grep('_ACC', names(cnb_df), value=TRUE)], scale)
+cnb_df[, grep('_ACC', names(cnb_df), value=TRUE)[!(grep('_ACC', names(cnb_df), value=TRUE) %in% overall_acc)]] <- sapply(cnb_df[, grep('_ACC', names(cnb_df), value=TRUE)[!(grep('_ACC', names(cnb_df), value=TRUE) %in% overall_acc)]], scale)
 cnb_df$WIV_ACC <- scale(apply(cnb_df[, grep('_ACC', names(cnb_df), value=TRUE)], 1, sd))
 
 cnb_df[, grep('_RT', names(cnb_df), value=TRUE)] <- sapply(cnb_df[, grep('_RT', names(cnb_df), value=TRUE)], scale)
@@ -84,13 +86,15 @@ getUpperLowerCI <- function(i) {
 
 ################################## Titles ##################################
 
-varis <- c(grep('WIV', names(cnb_df), value=TRUE), 'SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
+names(cnb_df)[names(cnb_df) == 'TAP_RT'] <- 'TAP'
+varis <- c(grep('WIV', names(cnb_df), value=TRUE), overall_eff, overall_acc, 'TAP')
 
 title_df <- data.frame(Variable=varis, NewName=c('WIV Efficiency', 'WIV Accuracy',
   'WIV Speed', 'WIV Executive Efficiency', 'WIV Memory Efficiency', 'WIV Complex Efficiency',
   'WIV Social Efficiency', 'Social Efficiency', 'Executive Efficiency',
-  'Memory Efficiency', 'Complex Efficiency'), LB=c(rep(-1.5, 3), rep(-1.5, 4),
-  rep(-3, 4)), UB=c(rep(2, 11)))
+  'Memory Efficiency', 'Complex Efficiency', 'Social Accuracy',
+  'Memory Accuracy', 'Complex Accuracy', 'Finger Tapping Speed'),
+  LB=c(rep(-1.5, 3), rep(-3, 12)), UB=c(rep(2, 15)))
 
 
 ################################## GAMMs ##################################
@@ -142,11 +146,16 @@ for (vari in varis) {
     final_df$predgamm <- predict(mod1b$gam)
 
 
-    subtit <- paste0('Sessions: TD-TD=', nrow(final_df[final_df$Diagnoses == 'TD-TD' & ufinal_df$bblid,]),
-          ', Improve=', nrow(final_df[final_df$Diagnoses == 'Improve',]),
-          ',\nOP-OP=', nrow(final_df[final_df$Diagnoses == 'OP-OP',]),
-          ', Decline=', nrow(final_df[final_df$Diagnoses == 'Decline',]),
-          ', PS-PS=', nrow(final_df[final_df$Diagnoses == 'PS-PS',]))
+    subtit <- paste0('N (Sessions): TD-TD=', length(unique(final_df[final_df$Diagnoses == 'TD-TD' & final_df$bblid, 'bblid'])),
+          ' (', nrow(final_df[final_df$Diagnoses == 'TD-TD' & final_df$bblid,]),
+          '), Improve=', length(unique(final_df[final_df$Diagnoses == 'Improve' & final_df$bblid, 'bblid'])),
+          ' (', nrow(final_df[final_df$Diagnoses == 'Improve',]),
+          '),\nOP-OP=', length(unique(final_df[final_df$Diagnoses == 'OP-OP' & final_df$bblid, 'bblid'])),
+          ' (', nrow(final_df[final_df$Diagnoses == 'OP-OP',]),
+          '), Decline=', length(unique(final_df[final_df$Diagnoses == 'Decline' & final_df$bblid, 'bblid'])),
+          ' (', nrow(final_df[final_df$Diagnoses == 'Decline',]),
+          '), PS-PS=', length(unique(final_df[final_df$Diagnoses == 'PS-PS' & final_df$bblid, 'bblid'])),
+          ' (', nrow(final_df[final_df$Diagnoses == 'PS-PS',]), ')')
 
     final_df$Diagnoses <- ordered(final_df$Diagnoses, c('TD-TD', 'Improve', 'OP-OP', 'Decline', 'PS-PS'))
     cnb_plot <- ggplot(final_df, aes_string(x='Age', y=vari, color='Diagnoses')) + theme_linedraw() +
@@ -156,7 +165,7 @@ for (vari in varis) {
           labs(title=TIT, subtitle=subtit, y='Score', color='Diagnoses') + # (95% CI)
           geom_line(aes(y=predgamm), size=1) #title=paste0(TIT, ' (', sex, ')')
 
-      pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_collapsed_', vari, '_', sex, '.pdf'), width=6, height=4)
+      pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_collapsed_', vari, '_', sex, '.pdf'), width=5, height=4)
       print(cnb_plot)
       dev.off()
 
@@ -169,10 +178,16 @@ for (vari in varis) {
 #'SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF'
 # Add statistics to figures (or maybe not, just create a mega table)
 print(tab_model(Exec_EFF_model$gam, Mem_EFF_model$gam, CompCog_EFF_model$gam, SocCog_EFF_model$gam,
-  p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/cog_mega.html'))
+  TAP_model$gam, p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/cog_mega.html'))
+
+print(tab_model(WIV_EFF_model$gam, WIV_ACC_model$gam, WIV_RT_model$gam,
+  p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/wiv_mega.html'))
+
+print(tab_model(Mem_ACC_model$gam, CompCog_ACC_model$gam, SocCog_ACC_model$gam,
+  p.adjust='fdr', file='~/Documents/pncLongitudinalPsychosis/results/acc_mega.html'))
 
 
-# Build 2x2 with legend (SIPS)
+# Efficiency: Build 2x2 with legend (SIPS)
 Exec_EFF_both_plot <- Exec_EFF_both_plot + theme(legend.position='bottom')
 diag_legend <- get_legend(Exec_EFF_both_plot)
 
@@ -188,4 +203,30 @@ grid_plot <- cowplot::plot_grid(
 
 pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cog_grid_paper.pdf', width=7, height=7.5)
 print(grid_plot)
+dev.off()
+
+# Accuracy: Build 3x1 with legend (SIPS)
+Mem_ACC_both_plot <- Mem_ACC_both_plot + theme(legend.position='none')
+CompCog_ACC_both_plot <- CompCog_ACC_both_plot + theme(legend.position='none')
+SocCog_ACC_both_plot <- SocCog_ACC_both_plot + theme(legend.position='none')
+
+acc_grid_plot <- cowplot::plot_grid(
+  cowplot::plot_grid(Mem_ACC_both_plot, CompCog_ACC_both_plot, SocCog_ACC_both_plot,
+  labels=c('A', 'B', 'C'), nrow=1, ncol=3), diag_legend, rel_heights=c(4, 1), nrow=2, ncol=1)
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/acc_cog_grid_paper.pdf', width=10.5, height=4.1666)
+print(acc_grid_plot)
+dev.off()
+
+# WIV: Build 3x1 with legend (SIPS)
+WIV_EFF_both_plot <- WIV_EFF_both_plot + theme(legend.position='none')
+WIV_ACC_both_plot <- WIV_ACC_both_plot + theme(legend.position='none')
+WIV_RT_both_plot <- WIV_RT_both_plot + theme(legend.position='none')
+
+wiv_grid_plot <- cowplot::plot_grid(
+  cowplot::plot_grid(WIV_EFF_both_plot, WIV_ACC_both_plot, WIV_RT_both_plot,
+  labels=c('A', 'B', 'C'), nrow=1, ncol=3), diag_legend, rel_heights=c(4, 1), nrow=2, ncol=1)
+
+pdf(file='~/Documents/pncLongitudinalPsychosis/plots/wiv_cog_grid_paper.pdf', width=10.5, height=4.1666)
+print(wiv_grid_plot)
 dev.off()
