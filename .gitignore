@@ -7,3 +7,5 @@
 *tables/
 *.Rapp.history
 *submissions/
+*papers/
+*combatGAMM.R

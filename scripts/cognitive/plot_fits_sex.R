@@ -2,6 +2,7 @@
 ###
 ### Ellyn Butler
 ### August 27, 2020 - September 21, 2020
+### April 15, 2021: Include lines per subject
 
 
 library('dplyr')
@@ -14,7 +15,7 @@ library('stringr')
 library('MASS')
 library('broom')
 
-final_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2020-10-20.csv')
+final_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/cognitive/cnb_quickFA_impute_2021-04-06.csv')
 
 final_df$t1_tfinal <- ordered(final_df$t1_tfinal, c('TD_TD', 'TD_OP', 'TD_PS',
   'OP_TD', 'OP_OP', 'OP_PS', 'PS_TD', 'PS_OP', 'PS_PS'))
@@ -36,12 +37,15 @@ getUpperLowerCI <- function(i) {
 ###################### Plot factor scores ######################
 
 plotcols <- c('SocCog_EFF', 'Exec_EFF', 'Mem_EFF', 'CompCog_EFF')
+clean_names <- c('Social Cognition Efficiency', 'Executive Efficiency',
+  'Memory Efficiency', 'Complex Cognition Efficiency')
 
+i=1
 for (test in plotcols) {
   cnb_test_df <- final_df
-  names(cnb_test_df)[names(cnb_test_df) == test] <- 'test'
+  names(cnb_test_df)[names(cnb_test_df) == test] <- 'Score'
 
-  mod1b <- gamm4(test ~ sex +  s(Age, by=oSex, k=4, bs='cr') +
+  mod1b <- gamm4(Score ~ sex +  s(Age, by=oSex, k=4, bs='cr') +
     s(Age, k=4, bs='cr'), data=cnb_test_df, random=~(1|bblid), REML=TRUE)
 
   lp <- predict(mod1b$gam, newdata=cnb_test_df, type='lpmatrix')
@@ -66,11 +70,12 @@ for (test in plotcols) {
   subtit <- paste0('Sessions: Female=', nrow(cnb_test_df[cnb_test_df$sex == 'Female',]),
     ', Male=', nrow(cnb_test_df[cnb_test_df$sex == 'Male',]))
 
-  cnb_plot <- ggplot(cnb_test_df, aes(x=Age, y=test, color=sex)) + theme_linedraw() +
+  cnb_plot <- ggplot(cnb_test_df, aes(x=Age, y=Score, color=sex)) + theme_linedraw() +
     scale_color_manual(values=c('red', 'blue')) +
     theme(legend.position = 'bottom', plot.title=element_text(size=14, face="bold"),
       plot.subtitle=element_text(size=8)) +
-    labs(title=test, subtitle=subtit) + geom_line(aes(y=predgamm), size=1) +
+    labs(title=clean_names[i], subtitle=subtit) + geom_line(aes(y=predgamm), size=1) +
+    geom_line(aes(group=bblid), alpha=.2) +
     geom_line(data=cnb_test_df[cnb_test_df$sex == 'Female',], aes(y=LCI),
       size=.7, linetype=2, color='gray20') +
     geom_line(data=cnb_test_df[cnb_test_df$sex == 'Female',], aes(y=UCI),
@@ -81,20 +86,25 @@ for (test in plotcols) {
       size=.7, linetype=2, color='gray60')
 
   assign(paste0(test, '_plot'), cnb_plot)
+  pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_', test, '_sex.pdf'), width=4, height=4)
+  print(cnb_plot)
+  dev.off()
+
+  i=i+1
 }
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_SocCog_EFF_sex.pdf', width=4, height=4)
-SocCog_EFF_plot
-dev.off()
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_Exec_EFF_sex.pdf', width=4, height=4)
-Exec_EFF_plot
-dev.off()
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_Mem_EFF_sex.pdf', width=4, height=4)
-Mem_EFF_plot
-dev.off()
 
-pdf(file='~/Documents/pncLongitudinalPsychosis/plots/cnbFactorImpute_CompCog_EFF_sex.pdf', width=4, height=4)
-CompCog_EFF_plot
-dev.off()
+
+
+
+
+
+
+
+
+
+
+
+#
