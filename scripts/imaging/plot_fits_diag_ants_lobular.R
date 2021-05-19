@@ -4,7 +4,7 @@
 ### Reach out to Dr. Joanne Beer for help.
 ###
 ### Ellyn Butler
-### May 3, 2021
+### May 18, 2021
 
 set.seed(20)
 
@@ -20,15 +20,8 @@ library('broom') # V 0.7.2
 library('sjPlot') # V 2.8.6
 library('cowplot') # V 1.1.1
 library('pbkrtest') # V 0.5-0.1
-#library('gratia') # V 0.4.0
 
-# Declare functions
-getAssessmentNumber <- function(i, dataf) {
-  bblid <- dataf[i, 'bblid']
-  ages <- dataf[dataf$bblid == bblid, 'age']
-  ages <- sort(unique(ages))
-  which(ages == dataf[i, 'age'])
-}
+############################### Declare functions ###############################
 
 getUpperLowerCI <- function(i) {
   sorted_vec <- unname(sort(fits[i,]))
@@ -37,7 +30,57 @@ getUpperLowerCI <- function(i) {
   c(lower, upper)
 }
 
-# Read in data
+getMoreRegions <- function(lobe) {
+  regions <- regionlobe_df[regionlobe_df$lobe == lobe, 'region']
+  regions_vol_rh <- paste0('vol_rh_', regions)
+  regions_ct_rh <- paste0('ct_rh_', regions)
+  regions_gmd_rh <- paste0('gmd_rh_', regions)
+
+  getAveDiffVol <- function(region_rh) {
+    region_lh <- gsub('rh', 'lh', region_rh)
+    tmp <- data.frame(
+      ave=rowMeans(img_df[, c(region_rh, region_lh)]),
+      diff=img_df[, region_rh] - img_df[, region_lh]
+    )
+    names(tmp) <- c(gsub('rh', 'ave', region_rh), gsub('rh', 'diff', region_rh))
+    tmp
+  }
+  getAveDiffOth <- function(region_rh, modal) {
+    modal <- strsplit(region_rh, '_')[[1]][1]
+    region_lh <- gsub('rh', 'lh', region_rh)
+    region_rh_vol <- gsub(modal, 'vol', region_rh)
+    region_lh_vol <- gsub('rh', 'lh', region_rh_vol)
+    tmp <- data.frame(
+      ave=(img_df[, region_rh]*img_df[, region_rh_vol] +
+        img_df[, region_lh]*img_df[, region_lh_vol])/(img_df[, region_rh_vol] + img_df[, region_lh_vol]),
+      diff=(img_df[, region_rh]*img_df[, region_rh_vol] -
+        img_df[, region_lh]*img_df[, region_lh_vol])/(img_df[, region_rh_vol] + img_df[, region_lh_vol])
+    )
+    names(tmp) <- c(gsub('rh', 'ave', region_rh), gsub('rh', 'diff', region_rh))
+    tmp
+  }
+  getLobeVol <- function(lobe) {
+    regions <- grep('vol.*h_.*', names(img_df), value=TRUE)
+    regions <- regions[regions %in% regionlobe_df[regionlobe_df$lobe == lobe, 'region']]
+
+  }
+  getLobeVol <- function(lobe) {
+
+  }
+
+  vol_avediff <- do.call(bind_cols, data.frame(sapply(regions_vol_rh, getAveDiffVol)))
+  ct_avediff <- do.call(bind_cols, data.frame(sapply(regions_ct_rh, getAveDiffOth, modal='ct')))
+  gmd_avediff <- do.call(bind_cols, data.frame(sapply(regions_gmd_rh, getAveDiffOth, modal='gmd')))
+
+  vol_lobe <- sapply(unique(regionlobe_df$lobe), getLobeVol)
+  ct_lobe <- sapply(unique(regionlobe_df$lobe), getLobeOth)
+  gmd_lobe <- sapply(unique(regionlobe_df$lobe), getLobeOth)
+
+  cbind(vol_avediff, ct_avediff, gmd_avediff, vol_lobe, ct_lobe, gmd_lobe)
+}
+
+################################# Read in data #################################
+
 img_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/imaging/antslong_struc_2021-04-26.csv')
 diag_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n749_20210112.csv')
 demo_df <- read.csv('~/Documents/ExtraLong/data/demographicsClinical/scanid_to_seslabel_demo_20200531.csv')
@@ -93,6 +136,10 @@ regionlobe_df <- data.frame(region=unique(region), lobe=c('frontal', 'frontal',
   'temporal', 'parietal', 'temporal', 'other'))
 
 diags <- as.character(unique(img_df$Diagnoses)[!(unique(img_df$Diagnoses) %in% c('TD-TD', 'PS-PS'))])
+
+lobes <- unique(regionlobe_df$lobe)
+
+
 
 i=1
 for (Value in plotcols) {
