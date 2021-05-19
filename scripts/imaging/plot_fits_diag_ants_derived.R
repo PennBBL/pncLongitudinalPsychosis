@@ -4,7 +4,7 @@
 ### Reach out to Dr. Joanne Beer for help.
 ###
 ### Ellyn Butler
-### May 18, 2021
+### May 18, 2021 - May 19, 2021
 
 set.seed(20)
 
@@ -37,46 +37,59 @@ getMoreRegions <- function(lobe) {
   regions_gmd_rh <- paste0('gmd_rh_', regions)
 
   getAveDiffVol <- function(region_rh) {
-    region_lh <- gsub('rh', 'lh', region_rh)
+    region_lh <- gsub('_rh_', '_lh_', region_rh)
     tmp <- data.frame(
       ave=rowMeans(img_df[, c(region_rh, region_lh)]),
       diff=img_df[, region_rh] - img_df[, region_lh]
     )
-    names(tmp) <- c(gsub('rh', 'ave', region_rh), gsub('rh', 'diff', region_rh))
+    names(tmp) <- c(gsub('_rh_', '_ave_', region_rh), gsub('_rh_', '_diff_', region_rh))
     tmp
   }
-  getAveDiffOth <- function(region_rh, modal) {
+  getAveDiffOth <- function(region_rh) {
     modal <- strsplit(region_rh, '_')[[1]][1]
-    region_lh <- gsub('rh', 'lh', region_rh)
+    region_lh <- gsub('_rh_', '_lh_', region_rh)
     region_rh_vol <- gsub(modal, 'vol', region_rh)
-    region_lh_vol <- gsub('rh', 'lh', region_rh_vol)
+    region_lh_vol <- gsub('_rh_', '_lh_', region_rh_vol)
     tmp <- data.frame(
       ave=(img_df[, region_rh]*img_df[, region_rh_vol] +
         img_df[, region_lh]*img_df[, region_lh_vol])/(img_df[, region_rh_vol] + img_df[, region_lh_vol]),
       diff=(img_df[, region_rh]*img_df[, region_rh_vol] -
         img_df[, region_lh]*img_df[, region_lh_vol])/(img_df[, region_rh_vol] + img_df[, region_lh_vol])
     )
-    names(tmp) <- c(gsub('rh', 'ave', region_rh), gsub('rh', 'diff', region_rh))
+    names(tmp) <- c(gsub('_rh_', '_ave_', region_rh), gsub('_rh_', '_diff_', region_rh))
     tmp
   }
   getLobeVol <- function(lobe) {
-    regions <- grep('vol.*h_.*', names(img_df), value=TRUE)
-    regions <- regions[regions %in% regionlobe_df[regionlobe_df$lobe == lobe, 'region']]
-
+    vol_regions <- c(paste0('vol_rh_', regionlobe_df[regionlobe_df$lobe == lobe, 'region']),
+      paste0('vol_lh_', regionlobe_df[regionlobe_df$lobe == lobe, 'region']))
+    rowSums(img_df[, vol_regions])
   }
-  getLobeVol <- function(lobe) {
-
+  getLobeOth <- function(lobe, modal) {
+    oth_regions <- c(paste0(modal, '_rh_', regionlobe_df[regionlobe_df$lobe == lobe, 'region']),
+      paste0(modal, '_lh_', regionlobe_df[regionlobe_df$lobe == lobe, 'region']))
+    total_vol <- getLobeVol(lobe)
+    lobe_val <- rep(0, nrow(img_df))
+    for (reg in regions) {
+      lobe_val <- lobe_val +
+        img_df[, paste0(modal, '_rh_', reg)]*img_df[, paste0('vol_rh_', reg)]/total_vol +
+        img_df[, paste0(modal, '_lh_', reg)]*img_df[, paste0('vol_lh_', reg)]/total_vol
+    }
+    lobe_val
   }
 
   vol_avediff <- do.call(bind_cols, data.frame(sapply(regions_vol_rh, getAveDiffVol)))
-  ct_avediff <- do.call(bind_cols, data.frame(sapply(regions_ct_rh, getAveDiffOth, modal='ct')))
-  gmd_avediff <- do.call(bind_cols, data.frame(sapply(regions_gmd_rh, getAveDiffOth, modal='gmd')))
+  ct_avediff <- do.call(bind_cols, data.frame(sapply(regions_ct_rh, getAveDiffOth)))
+  gmd_avediff <- do.call(bind_cols, data.frame(sapply(regions_gmd_rh, getAveDiffOth)))
 
-  vol_lobe <- sapply(unique(regionlobe_df$lobe), getLobeVol)
-  ct_lobe <- sapply(unique(regionlobe_df$lobe), getLobeOth)
-  gmd_lobe <- sapply(unique(regionlobe_df$lobe), getLobeOth)
+  vol_lobe <- getLobeVol(lobe)
+  ct_lobe <- getLobeOth(lobe, modal='ct')
+  gmd_lobe <- getLobeOth(lobe, modal='gmd')
 
-  cbind(vol_avediff, ct_avediff, gmd_avediff, vol_lobe, ct_lobe, gmd_lobe)
+  tmp <- cbind(vol_avediff, ct_avediff, gmd_avediff, vol_lobe, ct_lobe, gmd_lobe)
+  names(tmp) <- c(names(vol_avediff), names(ct_avediff), names(gmd_avediff),
+    paste0('vol_', lobe), paste0('ct_', lobe), paste0('gmd_', lobe))
+  names(tmp) <- gsub('\\..*([0-9]).*', '', names(tmp))
+  tmp
 }
 
 ################################# Read in data #################################
@@ -139,7 +152,9 @@ diags <- as.character(unique(img_df$Diagnoses)[!(unique(img_df$Diagnoses) %in% c
 
 lobes <- unique(regionlobe_df$lobe)
 
-
+derived_df <- do.call(bind_cols, sapply(lobes, getMoreRegions))
+names(derived_df) <- gsub('\\..*([0-9]).*', '', names(derived_df))
+img_df <- cbind(img_df, derived_df)
 
 i=1
 for (Value in plotcols) {
