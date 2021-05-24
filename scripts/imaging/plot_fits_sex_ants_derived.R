@@ -4,7 +4,7 @@
 ### Reach out to Dr. Joanne Beer for help.
 ###
 ### Ellyn Butler
-### May 18, 2021 - May 20, 2021
+### May 18, 2021 - May 24, 2021
 
 set.seed(20)
 
@@ -81,6 +81,7 @@ getMoreRegions <- function(lobe) {
   ct_avediff <- do.call(bind_cols, data.frame(lapply(regions_ct_rh, getAveDiffOth)))
   gmd_avediff <- do.call(bind_cols, data.frame(lapply(regions_gmd_rh, getAveDiffOth)))
 
+
   vol_lobe <- getLobeVol(lobe)
   ct_lobe <- getLobeOth(lobe, modal='ct')
   gmd_lobe <- getLobeOth(lobe, modal='gmd')
@@ -128,7 +129,8 @@ img_df <- merge(img_df, diag_df, by='bblid')
 img_df <- merge(img_df, demo_df)
 
 img_df$White <- recode(img_df$race, `1`=TRUE, `2`=FALSE, `3`=FALSE, `4`=FALSE, `5`=FALSE)
-img_df$Male <- recode(img_df$sex, `1`=TRUE, `2`=FALSE)
+img_df$Sex <- recode(img_df$sex, `1`='Male', `2`='Female')
+img_df$oSex <- ordered(img_df$Sex, c('Female', 'Male'))
 
 names(img_df)[names(img_df) == 'scanage_years'] <- 'Age'
 
@@ -163,16 +165,11 @@ for (Value in plotcols) {
   img_Value_df <- img_Value_df[!is.na(img_Value_df[, Value]), ]
   row.names(img_Value_df) <- 1:nrow(img_Value_df)
 
-  mod1b <- gamm4(as.formula(paste(Value, "~ Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=10, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
+  mod1b <- gamm4(as.formula(paste(Value, "~ Sex + s(Age, k=4, bs='cr') +
+    s(Age, by=oSex, k=10, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
 
-  mod2b <- gamm4(as.formula(paste(Value, "~ Male + White + Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=10, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
-
-  print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/table_', Value, '.html')))
+  print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/table_', Value, '_sex.html')))
   assign(paste0(Value, '_model'), mod1b$gam)
-  print(tab_model(mod2b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/tableSensitivity_', Value, '.html')))
-  assign(paste0(Value, 'Sensitivity_model'), mod2b$gam)
 
   lp <- predict(mod1b$gam, newdata=img_Value_df, type='lpmatrix')
   coefs <- coef(mod1b$gam)
@@ -188,34 +185,27 @@ for (Value in plotcols) {
 
   img_Value_df$predgamm <- predict(mod1b$gam)
 
-  for (group in diags) {
-    subtit <- paste0('Sessions: TD-TD=', nrow(img_Value_df[img_Value_df$Diagnoses == 'TD-TD',]),
-      ', ', group, '=', nrow(img_Value_df[img_Value_df$Diagnoses == group,]),
-      ', PS-PS=', nrow(img_Value_df[img_Value_df$Diagnoses == 'PS-PS',]))
-    group_df <- img_Value_df[img_Value_df$Diagnoses %in% c('TD-TD', group, 'PS-PS'), ]
-    group_df$Diagnoses <- ordered(group_df$Diagnoses, c('TD-TD', group, 'PS-PS'))
+  subtit <- paste0('Sessions: Male=', nrow(img_Value_df[img_Value_df$Diagnoses == 'TD-TD',]),
+    ', Female=', nrow(img_Value_df[img_Value_df$Diagnoses == 'PS-PS',]))
 
-    intervals_df <- reshape2::melt(group_df, c('bblid', 'Age', 'Diagnoses'), c('LCI', 'UCI'))
-    img_plot <- ggplot(group_df, aes_string(x='Age', y=Value, color='Diagnoses')) +
+  intervals_df <- reshape2::melt(img_Value_df, c('bblid', 'Age', 'Sex'), c('LCI', 'UCI'))
+  img_plot <- ggplot(img_Value_df, aes_string(x='Age', y=Value, color='Sex')) +
       theme_linedraw() + xlim(10, 30) +
-      labs(title=Value, subtitle=subtit, y='Value (95% CI)', color='Diagnoses') +
-      scale_color_manual(values=c('green3', 'goldenrod2', 'red')) +
+      labs(title=Value, subtitle=subtit, y='Value (95% CI)', color='Sex') +
+      scale_color_manual(values=c('red', 'blue')) +
       theme(legend.position = 'bottom', plot.title=element_text(size=12, face="bold"),
         plot.subtitle=element_text(size=7)) +
       geom_line(aes(y=predgamm), size=1) +
-      geom_ribbon(data=img_Value_df[img_Value_df$Diagnoses == 'TD-TD',],
-        aes(ymin=LCI, ymax=UCI), alpha=.2, fill='green3', show.legend=FALSE) +
-      geom_ribbon(data=img_Value_df[img_Value_df$Diagnoses == group,],
-        aes(ymin=LCI, ymax=UCI), alpha=.2, fill='goldenrod2', show.legend=FALSE) +
-      geom_ribbon(data=img_Value_df[img_Value_df$Diagnoses == 'PS-PS',],
+      geom_ribbon(data=img_Value_df[img_Value_df$Sex == 'Male',],
+        aes(ymin=LCI, ymax=UCI), alpha=.2, fill='blue', show.legend=FALSE) +
+      geom_ribbon(data=img_Value_df[img_Value_df$Sex == 'Female',],
         aes(ymin=LCI, ymax=UCI), alpha=.2, fill='red', show.legend=FALSE)
 
-    assign(paste0(Value, '_', gsub('-', '_', group), '_plot'), img_plot)
+  assign(paste0(Value, '_sex_plot'), img_plot)
 
-    pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/imaging/', Value, '_', group, '_clean.pdf'), width=4, height=4)
-    print(img_plot)
-    dev.off()
-  }
+  pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/imaging/', Value, '_sex_clean.pdf'), width=4, height=4)
+  print(img_plot)
+  dev.off()
   i=i+1
 }
 
@@ -223,14 +213,16 @@ for (Value in plotcols) {
 # Create tables for each of the lobes
 for (lobe in unique(regionlobe_df$lobe)) {
   for (modal in c('vol', 'ct', 'gmd')) {
-    lobe_regions <- regionlobe_df[regionlobe_df$lobe == lobe, 'region']
-    model_list <- list()
-    for (i in 1:length(lobe_regions)) {
-      reg <- lobe_regions[i]
-      model_list[[i]] <- get(paste(modal, 'ave', reg, 'model', sep='_'))
+    for (hemi in c('diff', 'ave')) {
+      lobe_regions <- regionlobe_df[regionlobe_df$lobe == lobe, 'region']
+      model_list <- list()
+      for (i in 1:length(lobe_regions)) {
+        reg <- lobe_regions[i]
+        model_list[[i]] <- get(paste(modal, hemi, reg, 'model', sep='_'))
+      }
+      print(tab_model(model_list, p.adjust='fdr',
+        file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/sex_', lobe, '_', modal, '_', hemi, '.html')))
     }
-    print(tab_model(model_list, p.adjust='fdr',
-      file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/', lobe, '_', modal, '_ave.html')))
   }
 }
 
