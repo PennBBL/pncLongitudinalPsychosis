@@ -53,8 +53,7 @@ getMoreRegions <- function(lobe) {
     tmp <- data.frame(
       ave=(img_df[, region_rh]*img_df[, region_rh_vol] +
         img_df[, region_lh]*img_df[, region_lh_vol])/(img_df[, region_rh_vol] + img_df[, region_lh_vol]),
-      diff=(img_df[, region_rh]*img_df[, region_rh_vol] -
-        img_df[, region_lh]*img_df[, region_lh_vol])/(img_df[, region_rh_vol] + img_df[, region_lh_vol])
+      diff=(img_df[, region_rh] - img_df[, region_lh])
     )
     names(tmp) <- c(gsub('_rh_', '_ave_', region_rh), gsub('_rh_', '_diff_', region_rh))
     tmp
