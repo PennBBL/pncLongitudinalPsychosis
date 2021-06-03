@@ -167,11 +167,11 @@ for (Value in plotcols) {
   row.names(img_Value_df) <- 1:nrow(img_Value_df)
 
   mod1b <- gamm4(as.formula(paste(Value, "~ Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=4, bs='cr')")), knots=list(15, 18, 21, 24),
+    s(Age, by=oDiagnoses, k=4, bs='cr')")), knots=list(20, 22, 23, 25),
     data=img_Value_df, random=~(1|bblid), REML=TRUE)
 
   mod2b <- gamm4(as.formula(paste(Value, "~ Male + White + Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=4, bs='cr')")), knots=list(15, 18, 21, 24),
+    s(Age, by=oDiagnoses, k=4, bs='cr')")), knots=list(20, 22, 23, 25),
     data=img_Value_df, random=~(1|bblid), REML=TRUE)
 
   print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/table_', Value, '_antsknots.html')))
