@@ -1,10 +1,13 @@
 ### This script plots fits and outputs a model summary table for the ANTs imaging
-### values.
+### values. I played with the number and placement of knots to see if that changed
+### the lobular volume curves. I did this because the curve does not match the
+### lower age range, and Ruben wanted to make sure that what we were finding
+### wasn't an artifact of the method.
 ### NOTE TO FUTURE DATA ANALYSTS: This will need to be redone with ComBat + GAMM.
 ### Reach out to Dr. Joanne Beer for help.
 ###
 ### Ellyn Butler
-### June 1, 2021
+### June 2, 2021
 
 set.seed(20)
 
@@ -107,22 +110,21 @@ diag_df <- diag_df[diag_df$timepoint == 't1' | diag_df$timepoint == paste0('t', 
 diag_df$timepoint <- recode(diag_df$timepoint, 't1'='t1', 't2'='tfinal2',
   't3'='tfinal2', 't4'='tfinal2', 't5'='tfinal2', 't6'='tfinal2')
 
-diag_df$diagnosis <- recode(diag_df$diagnosis, 'psy'='PSY')
+diag_df$diagnosis <- recode(diag_df$diagnosis, 'psy'='PS')
 
 diag_df <- reshape2::dcast(diag_df, bblid ~ timepoint, value.var='diagnosis')
 diag_df$t1_tfinal <- paste(diag_df$t1, diag_df$tfinal2, sep='_')
 
 diag_df$Diagnoses <- recode(diag_df$t1_tfinal, 'TD_TD'='TD-TD', 'TD_other'='TD-OP',
   'TD_PS'='TD-PS', 'other_TD'='OP-TD', 'other_other'='OP-OP', 'other_PS'='OP-PS',
-  'PS_TD'='PS-TD', 'PS_other'='PS-OP', 'PS_PS'='PS-PS', 'PS_PSY'='PSY',
-  'other_PSY'='PSY', 'TD_PSY'='PSY')
+  'PS_TD'='PS-TD', 'PS_other'='PS-OP', 'PS_PS'='PS-PS')
 
 # Name/relevel variables as necessary
 diag_df$Diagnoses <- factor(diag_df$Diagnoses)
 diag_df$Diagnoses <- relevel(diag_df$Diagnoses, 'TD-TD')
 
 diag_df$oDiagnoses <- ordered(diag_df$Diagnoses, c('TD-TD', 'OP-OP', 'OP-PS',
-  'OP-TD', 'PS-OP', 'PS-PS', 'PS-TD', 'PSY', 'TD-OP', 'TD-PS'))
+  'OP-TD', 'PS-OP', 'PS-PS', 'PS-TD', 'TD-OP', 'TD-PS'))
 
 img_df <- merge(img_df, diag_df, by='bblid')
 img_df <- merge(img_df, demo_df)
@@ -156,6 +158,7 @@ derived_df <- do.call(bind_cols, sapply(lobes, getMoreRegions))
 img_df <- cbind(img_df, derived_df)
 
 plotcols <- names(derived_df)[!(names(derived_df) %in% c(grep('other', names(derived_df), value=TRUE), grep('insula', names(derived_df), value=TRUE)))]
+plotcols <- plotcols[!(plotcols %in% c(grep('ave', plotcols, value=TRUE), grep('diff', plotcols, value=TRUE)))]
 
 i=1
 for (Value in plotcols) {
@@ -164,14 +167,16 @@ for (Value in plotcols) {
   row.names(img_Value_df) <- 1:nrow(img_Value_df)
 
   mod1b <- gamm4(as.formula(paste(Value, "~ Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=4, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
+    s(Age, by=oDiagnoses, k=4, bs='cr')")), knots=list(15, 18, 21, 24),
+    data=img_Value_df, random=~(1|bblid), REML=TRUE)
 
   mod2b <- gamm4(as.formula(paste(Value, "~ Male + White + Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=4, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
+    s(Age, by=oDiagnoses, k=4, bs='cr')")), knots=list(15, 18, 21, 24),
+    data=img_Value_df, random=~(1|bblid), REML=TRUE)
 
-  print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/table_psy_', Value, '.html')))
+  print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/table_', Value, '_antsknots.html')))
   assign(paste0(Value, '_model'), mod1b$gam)
-  print(tab_model(mod2b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/tableSensitivity_psy_', Value, '.html')))
+  print(tab_model(mod2b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/tableSensitivity_', Value, '_antsknots.html')))
   assign(paste0(Value, 'Sensitivity_model'), mod2b$gam)
 
   lp <- predict(mod1b$gam, newdata=img_Value_df, type='lpmatrix')
@@ -212,7 +217,7 @@ for (Value in plotcols) {
 
     assign(paste0(Value, '_', gsub('-', '_', group), '_plot'), img_plot)
 
-    pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/imaging/seppsy_', Value, '_', group, '_clean.pdf'), width=4, height=4)
+    pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/imaging/', Value, '_', group, '_antsknots.pdf'), width=4, height=4)
     print(img_plot)
     dev.off()
   }
@@ -220,19 +225,6 @@ for (Value in plotcols) {
 }
 
 
-# Create tables for each of the lobes
-for (lobe in unique(regionlobe_df$lobe)) {
-  for (modal in c('vol', 'ct', 'gmd')) {
-    lobe_regions <- regionlobe_df[regionlobe_df$lobe == lobe, 'region']
-    model_list <- list()
-    for (i in 1:length(lobe_regions)) {
-      reg <- lobe_regions[i]
-      model_list[[i]] <- get(paste(modal, 'ave', reg, 'model', sep='_'))
-    }
-    print(tab_model(model_list, p.adjust='fdr',
-      file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/psy_', lobe, '_', modal, '_ave.html')))
-  }
-}
 
 
 

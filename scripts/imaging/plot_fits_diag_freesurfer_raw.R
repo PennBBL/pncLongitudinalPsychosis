@@ -4,7 +4,7 @@
 ### Reach out to Dr. Joanne Beer for help.
 ###
 ### Ellyn Butler
-### June 1, 2021
+### June 1, 2021 - June 2, 2021
 
 set.seed(20)
 
@@ -37,8 +37,12 @@ getUpperLowerCI <- function(i) {
 }
 
 # Read in data
-area_df <- read.csv('~/Documents/ExtraLong/data/freesurferCrossSectional/tabulated/lh_DKTatlas_area_2020-11-09.csv')
-cort_df <- read.csv('~/Documents/ExtraLong/data/freesurferCrossSectional/tabulated/lh_DKTatlas_thickness_2020-11-09.csv')
+area_lh_df <- read.csv('~/Documents/ExtraLong/data/freesurferCrossSectional/tabulated/lh_DKTatlas_area_2020-11-09.csv')
+cort_lh_df <- read.csv('~/Documents/ExtraLong/data/freesurferCrossSectional/tabulated/lh_DKTatlas_thickness_2020-11-09.csv')
+area_rh_df <- read.csv('~/Documents/ExtraLong/data/freesurferCrossSectional/tabulated/rh_DKTatlas_area_2020-11-09.csv')
+cort_rh_df <- read.csv('~/Documents/ExtraLong/data/freesurferCrossSectional/tabulated/rh_DKTatlas_thickness_2020-11-09.csv')
+area_df <- merge(area_lh_df, area_rh_df)
+cort_df <- merge(cort_lh_df, cort_rh_df)
 img_df <- merge(area_df, cort_df)
 qual_df <- read.csv('~/Documents/ExtraLong/data/qualityAssessment/antssstExclude.csv')
 img_df <- merge(qual_df, img_df)
@@ -107,14 +111,14 @@ for (Value in plotcols) {
   row.names(img_Value_df) <- 1:nrow(img_Value_df)
 
   mod1b <- gamm4(as.formula(paste(Value, "~ Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=10, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
+    s(Age, by=oDiagnoses, k=4, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
 
   mod2b <- gamm4(as.formula(paste(Value, "~ Male + White + Diagnoses + s(Age, k=4, bs='cr') +
-    s(Age, by=oDiagnoses, k=10, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
+    s(Age, by=oDiagnoses, k=4, bs='cr')")), data=img_Value_df, random=~(1|bblid), REML=TRUE)
 
-  print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/table_', Value, '.html')))
+  print(tab_model(mod1b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/table_', Value, '_freesurfer.html')))
   assign(paste0(Value, '_model'), mod1b$gam)
-  print(tab_model(mod2b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/tableSensitivity_', Value, '.html')))
+  print(tab_model(mod2b$gam, file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/tableSensitivity_', Value, '_freesurfer.html')))
   assign(paste0(Value, 'Sensitivity_model'), mod2b$gam)
 
   lp <- predict(mod1b$gam, newdata=img_Value_df, type='lpmatrix')
@@ -155,7 +159,7 @@ for (Value in plotcols) {
 
     assign(paste0(Value, '_', gsub('-', '_', group), '_plot'), img_plot)
 
-    pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/imaging/', Value, '_', group, '_clean.pdf'), width=4, height=4)
+    pdf(file=paste0('~/Documents/pncLongitudinalPsychosis/plots/imaging/', Value, '_', group, '_freesurfer.pdf'), width=4, height=4)
     print(img_plot)
     dev.off()
   }
@@ -165,16 +169,16 @@ for (Value in plotcols) {
 
 # Create tables for each of the lobes
 for (lobe in unique(regionlobe_df$lobe)) {
-  for (modal in c('vol', 'ct', 'gmd'))
+  for (modal in c('area', 'thickness')) {
     for (hemi in c('rh', 'lh')) {
       lobe_regions <- regionlobe_df[regionlobe_df$lobe == lobe, 'region']
       model_list <- list()
       for (i in 1:length(lobe_regions)) {
         reg <- lobe_regions[i]
-        model_list[[i]] <- get(paste(modal, hemi, reg, 'model', sep='_'))
+        model_list[[i]] <- get(paste(hemi, reg, modal, 'model', sep='_'))
       }
       print(tab_model(model_list, p.adjust='fdr',
-        file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/', lobe, '_', modal, '_', hemi, '.html')))
+        file=paste0('~/Documents/pncLongitudinalPsychosis/results/imaging/', lobe, '_', modal, '_', hemi, '_freesurfer.html')))
     }
   }
 }
