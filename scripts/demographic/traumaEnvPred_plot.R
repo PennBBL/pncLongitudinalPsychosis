@@ -1,5 +1,6 @@
-### This script makes plot of baseline demographic and trauma features by
-### 3x3 trajectories (R version 4.1)
+### This script runs logistic regressions to predict final PS status using baseline
+### number of types of trauma and neighborhood environment.
+### Creates Figure 4 and Table 3 in the longitudinal clinical paper.
 ###
 ### Ellyn Butler
 ### September 8, 2020 - September 11, 2020 (changed to envSES on November 30, 2020)
@@ -14,7 +15,7 @@ library('fastDummies') # Version 1.6.1
 library('cowplot') # Version 1.1.1
 
 clin_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/clinical/pnc_longitudinal_diagnosis_n749_20210112.csv', stringsAsFactors = TRUE)
-demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n1601_demographics_go1_20161212.csv', stringsAsFactors = TRUE)
+demo_df <- read.csv('~/Documents/pncLongitudinalPsychosis/data/demographics/baseline/n9498_demographics_go1_20161212.csv', stringsAsFactors = TRUE)
 env_df <- read.csv('~/Documents/traumaInformant/data/n9498_go1_environment_factor_scores_tymoore_20150909.csv', stringsAsFactors = TRUE)
 trauma_df <- read.csv('~/Documents/traumaInformant/data/PNC_GO1_GOASSESSDataArchiveNontext_DATA_2015-07-14_1157.csv', stringsAsFactors = TRUE)
 
@@ -47,7 +48,8 @@ final_df <- merge(final_df, trauma_df, by='bblid')
 names(final_df)[names(final_df) == 't1'] <- 'first_diagnosis'
 names(final_df)[names(final_df) == 'tfinal2'] <- 'last_diagnosis'
 final_df$Female <- recode(final_df$sex, `2`=1, `1`=0)
-final_df$White <- recode(final_df$race, `1`=1, .default=0)
+final_df$Sex <- recode(final_df$sex, `2`='Female', `1`='Male')
+final_df$White <- recode(final_df$race, `1`='Yes', .default='No')
 final_df$first_diagnosis <- recode(final_df$first_diagnosis, 'other'='OP')
 final_df$first_diagnosis <- factor(final_df$first_diagnosis)
 final_df$last_diagnosis <- recode(final_df$last_diagnosis, 'other'='OP')
@@ -159,23 +161,35 @@ mod5.3 <- glm(PS_final ~ first_diagnosis*num_type_trauma*envSES*sex, family='bin
 print(tab_model(mod1, mod2.2, mod2, mod2.3, mod3.3, mod4.3, p.adjust='fdr',
   file='~/Documents/pncLongitudinalPsychosis/results/table_prediction.html'))
 
+###############################################################################
 
-##### Within first diagnosis groups
+final_df$Age <- final_df$ageAtClinicalAssess1
 
-#### TD
-for (diag in c('TD', 'OP', 'PS')) {
-  mod1 <- glm(PS_final ~ sex, family='binomial',
-    data=final_df[final_df$first_diagnosis == diag, ])
-  mod2 <- glm(PS_final ~ sex + num_type_trauma,
-    family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
-  mod3 <- glm(PS_final ~ sex + num_type_trauma + envSES,
-    family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
-  mod4 <- glm(PS_final ~ sex + num_type_trauma + envSES +
-    sex:num_type_trauma + num_type_trauma:envSES + sex:envSES,
-    family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
-  mod5 <- glm(PS_final ~ sex*num_type_trauma*envSES,
-      family='binomial', data=final_df[final_df$first_diagnosis == diag, ])
+# Sensitivity Table
+mod1b <- glm(PS_final ~ Age + Sex + White + first_diagnosis, family='binomial', data=final_df)
 
-  mods <- tab_model(mod1, mod2, mod3, mod4, mod5)
-  assign(paste0('mods_', diag), mods)
-}
+mod2.2b <- glm(PS_final ~ Age + Sex + White + first_diagnosis + envSES, family='binomial', data=final_df)
+
+mod2b <- glm(PS_final ~ Age + Sex + White + first_diagnosis + num_type_trauma, family='binomial', data=final_df)
+
+mod2.3b <- glm(PS_final ~ Age + Sex + White + first_diagnosis + num_type_trauma + envSES, family='binomial', data=final_df)
+
+mod3.3b <- glm(PS_final ~ Age + Sex + White + first_diagnosis + num_type_trauma*envSES, family='binomial', data=final_df)
+
+mod4.3b <- glm(PS_final ~ Age + Sex + White + first_diagnosis*num_type_trauma*envSES, family='binomial', data=final_df)
+
+print(tab_model(mod1b, mod2.2b, mod2b, mod2.3b, mod3.3b, mod4.3b, p.adjust='fdr',
+  file='~/Documents/pncLongitudinalPsychosis/results/table_prediction_sensitivity.html'))
+
+
+
+
+
+
+
+
+
+
+
+
+    #
